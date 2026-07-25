@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17344f" />
+    <meta name="description" content="Dino Type Racer is an original adaptive typing game with replaceable runners, tracks, and passages." />
+    <title>Dino Type Racer</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="wordmark" data-action="home" aria-label="Dino Type Racer home">
+          <span class="wordmark-icon">DR</span>
+          <span><strong data-game-title>Dino Type Racer</strong><small>Find your pace. Beat it.</small></span>
+        </button>
+        <div class="topbar-actions">
+          <label class="theme-picker" for="themeSelect"><span>Colors</span><select id="themeSelect" aria-label="Color scheme"></select></label>
+          <button class="text-button" data-action="library">Passages</button>
+          <button class="icon-button" id="contrastButton" aria-pressed="false" title="High contrast">Aa</button>
+          <button class="icon-button" id="motionButton" aria-pressed="false" title="Reduce motion">~</button>
+          <button class="icon-button" id="soundButton" aria-pressed="false" title="Mute sound">♪</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="screen hero-screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
+          <div class="hero-copy">
+            <p class="eyebrow">An adaptive typing race</p>
+            <h1 id="welcomeTitle">Your pace sets<br />the competition.</h1>
+            <p class="hero-deck">Take one honest typing test. Then race a lively cast trained to run right at your speed.</p>
+            <form id="profileForm" class="name-form">
+              <label for="playerName">Racer name</label>
+              <div class="input-action"><input id="playerName" maxlength="24" autocomplete="nickname" placeholder="Enter your name" required /><button class="primary" type="submit">Start test <span>→</span></button></div>
+            </form>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="sun"></div>
+            <div class="speed-line line-one"></div><div class="speed-line line-two"></div><div class="speed-line line-three"></div>
+            <img src="assets/characters/nova/nova-run.png" alt="" />
+            <div class="hero-stat"><strong>4 rivals</strong><span>matched to your pace</span></div>
+          </div>
+        </section>
+
+        <section class="screen test-screen" id="calibrationScreen" aria-labelledby="testTitle">
+          <div class="section-heading">
+            <div><p class="eyebrow">First-run calibration</p><h2 id="testTitle">Set your starting pace</h2><p>Choose how mistakes behave, then type for 60 seconds.</p></div>
+            <div class="timer-orb"><strong id="calibrationTimer">60</strong><span>seconds</span></div>
+          </div>
+          <div class="calibration-modes" role="radiogroup" aria-label="Mistake handling">
+            <button class="calibration-mode selected" data-calibration-mode="strict" role="radio" aria-checked="true"><strong>Strict</strong><span>Correct mistakes to continue</span></button>
+            <button class="calibration-mode" data-calibration-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving past mistakes</span></button>
+          </div>
+          <form id="manualPaceForm" class="manual-pace-form">
+            <div><strong>Already know your typing speed?</strong><span>Enter your usual WPM and skip the 60-second test.</span></div>
+            <label for="manualPaceWpm"><span>Starting pace</span><span class="manual-pace-input"><input id="manualPaceWpm" type="number" min="5" max="250" step="1" value="40" required /><b>WPM</b></span></label>
+            <button class="secondary compact" type="submit">Use this pace &amp; skip test</button>
+          </form>
+          <div class="typing-card focus-ring" id="calibrationTyping" tabindex="0" aria-label="Typing test. Start typing to begin.">
+            <div class="typing-meta"><span id="calibrationHint">Starts on your first keystroke</span><span><strong id="calibrationWpm">0</strong> WPM</span></div>
+            <div class="typing-viewport"><p class="typing-copy" aria-live="polite"><span class="typed"></span><span class="cursor"></span><span class="error"></span><span class="remaining"></span></p></div>
+          </div>
+          <button class="secondary" data-action="cancel-test">Back</button>
+        </section>
+
+        <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
+          <div class="dashboard-head">
+            <div><p class="eyebrow">Race control</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace.</p><form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" maxlength="24" autocomplete="nickname" required /><button class="secondary compact" type="submit">Save player</button></form></div>
+            <div class="baseline-card"><span>Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button></div>
+          </div>
+
+          <div class="setup-grid race-controls-grid">
+            <div class="setup-panel">
+              <div class="panel-title"><span>01</span><div><h3>Set rival pace</h3><p>Shift the whole computer field while keeping every rival varied.</p></div></div>
+              <div class="ai-pace-control">
+                <div class="ai-pace-readout"><div><span>Computer difficulty</span><strong id="aiPaceDescription">Matched</strong></div><output id="aiPaceValue" for="aiPaceSlider">0%</output></div>
+                <input id="aiPaceSlider" type="range" min="-20" max="20" step="1" value="0" aria-label="Computer pace adjustment percentage" />
+                <div class="ai-pace-scale"><span>-20% easier</span><span>Matched</span><span>+20% faster</span></div>
+                <p id="aiPaceRange" class="ai-pace-range">Projected rivals: 0-0 WPM</p>
+                <small>Calibration sets the starting point; this slider controls rival speed. Levels do not add a hidden boost.</small><label class="helper-toggle">Missed-key helper<select id="focusKeyHelperSelect" aria-label="Missed-key helper"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
+              </div>
+            </div>
+            <div class="setup-panel runner-control-panel">
+              <div class="panel-title"><span>02</span><div><h3>Choose your runner</h3><p>Your selection is saved with this player.</p></div></div>
+              <div class="runner-summary" id="selectedRunnerPreview"></div>
+              <button class="secondary runner-more-button" data-action="open-runners">More runners</button>
+              <p class="runner-note">More runner options will appear here automatically when they are added to the character manifest.</p>
+            </div>
+          </div>
+          <section class="championship-map" aria-labelledby="levelMapTitle">
+            <div class="championship-map-head"><div><span>Ten-level championship</span><h3 id="levelMapTitle">Choose a five-race level</h3></div><small id="championshipCompletion">0 of 10 levels completed</small></div>
+            <div class="level-buttons" id="levelButtons" aria-label="Championship levels"></div>
+            <div class="replay-rules"><label>Allowed replays per level <input id="replayLimit" type="number" min="0" max="20" step="1" value="2" /></label><label class="check-label"><input id="replayGlobal" type="checkbox" /> Override per level to per Game</label><span id="replayAllowanceStatus">2 replays available for this level</span></div>
+          </section>
+          <div class="launch-bar"><div><span>Challenge group</span><label class="passage-group-picker">Passages <select id="passageGroupSelect" aria-label="Passage group"></select></label><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong><button class="inline-button" data-action="library">View passages</button></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start five races <span>&rarr;</span></button></div></div>        </section>
+
+        <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
+          <div class="race-topline">
+            <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
+            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="pause">Pause</button></div>
+          </div>
+          <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button></div></div></div>
+          <div class="typing-card race-typing focus-ring" id="raceTyping" tabindex="0" aria-label="Race typing area">
+            <div class="typing-meta"><span id="raceHint">The race starts after the countdown</span><span><strong id="raceProgress">0</strong>% complete</span></div>
+            <div class="typing-viewport"><p class="typing-copy"><span class="typed"></span><span class="cursor"></span><span class="error"></span><span class="remaining"></span></p></div>
+          </div>
+        </section>
+
+        <section class="screen results-screen" id="resultsScreen" aria-labelledby="resultsTitle">
+          <p class="eyebrow" id="resultRaceLabel">Race 1 complete</p>
+          <h2 id="resultsTitle">1st Place</h2>
+          <p class="results-summary" id="resultsSummary"></p><div class="perfect-result-badge hidden" id="perfectResultBadge">Perfect!</div>
+          <p class="results-quip" id="resultsQuip"></p>
+          <div class="next-race-callout" id="nextRaceCallout"><span>Up next</span><strong id="nextRaceName">Race 2</strong></div>
+          <div class="series-race-nav" id="seriesRaceNav" aria-label="Races in this level"></div>
+          <div class="results-details">
+            <div class="result-grid"><div><span>Time</span><strong id="resultTime">0:00</strong></div><div><span>WPM</span><strong id="resultWpm">0</strong></div><div><span>Peak WPM</span><strong id="resultPeak">0</strong></div><div><span>Accuracy</span><strong id="resultAccuracy">100%</strong></div><div><span>Errors</span><strong id="resultErrors">0</strong></div></div>
+            <aside class="standings-panel"><span>Level points</span><div class="series-standings" id="seriesStandings"></div></aside>
+          </div>
+          <div class="replay-usage" id="replayUsage" aria-live="polite"></div>
+          <div class="results-actions"><button class="primary hidden" id="returnFromResultsButton" data-action="return-from-results">Return to race</button><button class="secondary" id="mistakeStatsButton" data-action="open-mistakes">Mistake Stats</button><button class="secondary" id="retryRaceButton" data-action="retry-race">Retry race</button><button class="secondary hidden" id="viewPodiumButton" data-action="view-podium">View Podium</button><button class="primary" id="nextRaceButton" data-action="next-race">Next race</button><button class="secondary" id="resultsDashboardButton" data-action="dashboard">Race control</button></div>
+        </section>
+
+        <dialog id="runnerDialog" class="runner-dialog" aria-labelledby="runnerDialogTitle">
+          <button class="dialog-close" data-action="close-runners" aria-label="Close runner menu">&times;</button>
+          <p class="eyebrow">Runner roster</p>
+          <h3 id="runnerDialogTitle">Choose your runner</h3>
+          <p class="runner-dialog-copy">Every runner registered in the character manifest appears here automatically.</p>
+          <div class="character-grid" id="characterGrid" role="radiogroup" aria-label="Runner"></div>
+        </dialog>
+        <dialog id="mistakeDialog" class="mistake-dialog" aria-labelledby="mistakeDialogTitle">
+          <button class="dialog-close" data-action="close-mistakes" aria-label="Close mistake stats">×</button>
+          <p class="eyebrow">Race review</p>
+          <h3 id="mistakeDialogTitle">Mistake Stats</h3>
+          <p id="mistakeSummary" class="mistake-summary"></p><div class="mistake-scope" role="group" aria-label="Mistake report range"><button class="secondary compact selected" data-mistake-scope="race">This race</button><button class="secondary compact" data-mistake-scope="series">All five races</button></div>
+          <section><h4>Most missed keys</h4><div id="mistakeChart" class="mistake-chart"></div></section>
+          <section><h4>Key confusions</h4><div id="mistakeConfusions" class="mistake-confusions"></div></section>
+          <section><h4>Where they happened</h4><div id="mistakeContexts" class="mistake-contexts"></div></section>
+        </dialog>
+
+        <section class="screen podium-screen" id="podiumScreen" aria-labelledby="podiumTitle">
+          <p class="eyebrow">Championship complete</p>
+          <h2 id="podiumTitle">The final podium.</h2>
+          <p class="podium-summary">Five races decided the standings. Here are the top three.</p>
+          <div class="podium-stage" id="podiumStage">
+            <div class="podium-winner podium-second" data-podium-place="2"></div>
+            <div class="podium-winner podium-first" data-podium-place="1"></div>
+            <div class="podium-winner podium-third" data-podium-place="3"></div>
+          </div>
+          <div class="podium-actions"><button class="primary" id="podiumContinueButton" data-action="continue-championship">Next Level</button><button class="secondary" id="podiumRetryButton" data-action="retry-level">Replay This Level</button><button class="secondary" data-action="dashboard">Return to Races</button></div>
+        </section>
+
+        <section class="screen library-screen" id="libraryScreen" aria-labelledby="libraryTitle">
+          <div class="section-heading"><div><p class="eyebrow">Content studio</p><h2 id="libraryTitle">Passage library</h2><p>Create and manage the sentences and paragraphs used in races.</p></div><button class="secondary" data-action="dashboard">Done</button></div>
+          <div class="library-grid">
+            <div class="passage-list-panel"><div class="library-toolbar"><button class="primary compact" data-action="new-passage">+ New passage</button><button class="secondary compact" data-action="export-passages">Export TXT</button><label class="secondary compact file-label">Import TXT<input id="importFile" type="file" accept="text/plain,.txt" /></label></div><div class="passage-list" id="passageList"></div></div>
+            <form class="editor-panel" id="passageForm"><input id="passageId" type="hidden" /><label>Section<input id="passageCategory" list="passageCategoryOptions" maxlength="40" required /><datalist id="passageCategoryOptions"></datalist></label><label>Passage name<input id="passageTitle" maxlength="60" required /></label><label>Source<input id="passageSource" maxlength="80" placeholder="Book, movie, or custom source" /></label><label>Text<textarea id="passageText" rows="12" required></textarea></label><div class="editor-details"><label class="check-label"><input id="passageEnabled" type="checkbox" checked /> Enabled for races</label><span id="passageLength">0 characters</span></div><p class="form-error" id="passageError" role="alert"></p><div class="editor-actions"><button class="primary" type="submit">Save passage</button><button class="secondary" type="button" data-action="preview-passage">Preview</button><button class="danger" type="button" data-action="delete-passage">Delete</button></div></form>
+          </div>
+        </section>
+      </main>
+      <footer><span>Original game and artwork · Local progress only</span><span>Press Escape to pause a race</span></footer>
+    </div>
+
+    <dialog id="previewDialog"><button class="dialog-close" data-action="close-preview" aria-label="Close">×</button><p class="eyebrow">Passage preview</p><h3 id="previewTitle"></h3><p id="previewText"></p></dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

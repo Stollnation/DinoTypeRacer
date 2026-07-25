@@ -1,0 +1,454 @@
+{
+    "version":  1,
+    "ui":  {
+               "podiumBackground":  null,
+               "perfectCelebration":  "assets/ui/perfect-race-placeholder.svg"
+           },
+    "characters":  [
+                       {
+                           "id":  "nova",
+                           "displayName":  "Nova",
+                           "color":  "#26c6da",
+                           "renderSize":  122,
+                           "raceScale":  2,
+                           "frameWidth":  1024,
+                           "frameHeight":  1024,
+                           "offset":  {
+                                          "x":  0,
+                                          "y":  0
+                                      },
+                           "animations":  {
+                                              "idle":  {
+                                                           "file":  "assets/characters/nova/nova-idle.png",
+                                                           "frames":  1,
+                                                           "fps":  2
+                                                       },
+                                              "run":  {
+                                                          "file":  "assets/characters/nova/nova-run.png",
+                                                          "frames":  1,
+                                                          "fps":  9
+                                                      },
+                                              "boost":  {
+                                                            "file":  "assets/characters/nova/nova-boost.png",
+                                                            "frames":  1,
+                                                            "fps":  12
+                                                        },
+                                              "win":  {
+                                                          "file":  "assets/characters/nova/nova-win.png",
+                                                          "frames":  1,
+                                                          "fps":  4
+                                                      },
+                                              "lose":  {
+                                                           "file":  "assets/characters/nova/nova-lose.png",
+                                                           "frames":  1,
+                                                           "fps":  3
+                                                       }
+                                          },
+                           "portrait":  "assets/characters/nova/nova-portrait.png",
+                           "playerScale":  1.14,
+                           "footAnchorY":  856
+                       },
+                       {
+                           "id":  "bolt",
+                           "displayName":  "Bolt",
+                           "color":  "#ff9f43",
+                           "renderSize":  122,
+                           "raceScale":  2,
+                           "frameWidth":  1024,
+                           "frameHeight":  1024,
+                           "offset":  {
+                                          "x":  0,
+                                          "y":  0
+                                      },
+                           "animations":  {
+                                              "idle":  {
+                                                           "file":  "assets/characters/bolt/bolt-idle.png",
+                                                           "frames":  1,
+                                                           "fps":  2
+                                                       },
+                                              "run":  {
+                                                          "file":  "assets/characters/bolt/bolt-run.png",
+                                                          "frames":  1,
+                                                          "fps":  9
+                                                      },
+                                              "boost":  {
+                                                            "file":  "assets/characters/bolt/bolt-boost.png",
+                                                            "frames":  1,
+                                                            "fps":  12
+                                                        },
+                                              "win":  {
+                                                          "file":  "assets/characters/bolt/bolt-win.png",
+                                                          "frames":  1,
+                                                          "fps":  4
+                                                      },
+                                              "lose":  {
+                                                           "file":  "assets/characters/bolt/bolt-lose.png",
+                                                           "frames":  1,
+                                                           "fps":  3
+                                                       }
+                                          },
+                           "portrait":  "assets/characters/bolt/bolt-portrait.png",
+                           "playerScale":  1.14,
+                           "footAnchorY":  855
+                       },
+                       {
+                           "id":  "moss",
+                           "displayName":  "Moss",
+                           "color":  "#5c9b54",
+                           "renderSize":  122,
+                           "raceScale":  2,
+                           "frameWidth":  1024,
+                           "frameHeight":  1024,
+                           "offset":  {
+                                          "x":  0,
+                                          "y":  0
+                                      },
+                           "animations":  {
+                                              "idle":  {
+                                                           "file":  "assets/characters/moss/moss-idle.png",
+                                                           "frames":  1,
+                                                           "fps":  2
+                                                       },
+                                              "run":  {
+                                                          "file":  "assets/characters/moss/moss-run.png",
+                                                          "frames":  1,
+                                                          "fps":  9
+                                                      },
+                                              "boost":  {
+                                                            "file":  "assets/characters/moss/moss-boost.png",
+                                                            "frames":  1,
+                                                            "fps":  12
+                                                        },
+                                              "win":  {
+                                                          "file":  "assets/characters/moss/moss-win.png",
+                                                          "frames":  1,
+                                                          "fps":  4
+                                                      },
+                                              "lose":  {
+                                                           "file":  "assets/characters/moss/moss-lose.png",
+                                                           "frames":  1,
+                                                           "fps":  3
+                                                       }
+                                          },
+                           "portrait":  "assets/characters/moss/moss-portrait.png",
+                           "playerScale":  1.14,
+                           "footAnchorY":  846
+                       },
+                       {
+                           "id":  "ember",
+                           "displayName":  "Ember",
+                           "color":  "#ff715b",
+                           "renderSize":  122,
+                           "raceScale":  2,
+                           "frameWidth":  1024,
+                           "frameHeight":  1024,
+                           "offset":  {
+                                          "x":  0,
+                                          "y":  0
+                                      },
+                           "animations":  {
+                                              "idle":  {
+                                                           "file":  "assets/characters/ember/ember-idle.png",
+                                                           "frames":  1,
+                                                           "fps":  2
+                                                       },
+                                              "run":  {
+                                                          "file":  "assets/characters/ember/ember-run.png",
+                                                          "frames":  1,
+                                                          "fps":  9
+                                                      },
+                                              "boost":  {
+                                                            "file":  "assets/characters/ember/ember-boost.png",
+                                                            "frames":  1,
+                                                            "fps":  12
+                                                        },
+                                              "win":  {
+                                                          "file":  "assets/characters/ember/ember-win.png",
+                                                          "frames":  1,
+                                                          "fps":  4
+                                                      },
+                                              "lose":  {
+                                                           "file":  "assets/characters/ember/ember-lose.png",
+                                                           "frames":  1,
+                                                           "fps":  3
+                                                       }
+                                          },
+                           "portrait":  "assets/characters/ember/ember-portrait.png",
+                           "playerScale":  1.14,
+                           "footAnchorY":  832
+                       },
+                       {
+                           "id":  "pixel",
+                           "displayName":  "Pixel",
+                           "color":  "#9d8cff",
+                           "renderSize":  122,
+                           "raceScale":  2,
+                           "frameWidth":  1024,
+                           "frameHeight":  1024,
+                           "offset":  {
+                                          "x":  0,
+                                          "y":  0
+                                      },
+                           "animations":  {
+                                              "idle":  {
+                                                           "file":  "assets/characters/pixel/pixel-idle.png?v=1784948280",
+                                                           "frames":  1,
+                                                           "fps":  2
+                                                       },
+                                              "run":  {
+                                                          "file":  "assets/characters/pixel/pixel-run.png?v=1784948280",
+                                                          "frames":  1,
+                                                          "fps":  9
+                                                      },
+                                              "boost":  {
+                                                            "file":  "assets/characters/pixel/pixel-boost.png?v=1784948280",
+                                                            "frames":  1,
+                                                            "fps":  12
+                                                        },
+                                              "win":  {
+                                                          "file":  "assets/characters/pixel/pixel-win.png?v=1784948280",
+                                                          "frames":  1,
+                                                          "fps":  4
+                                                      },
+                                              "lose":  {
+                                                           "file":  "assets/characters/pixel/pixel-lose.png?v=1784948280",
+                                                           "frames":  1,
+                                                           "fps":  3
+                                                       }
+                                          },
+                           "portrait":  "assets/characters/pixel/pixel-portrait.png?v=1784948280",
+                           "playerScale":  1.14,
+                           "footAnchorY":  827
+                       }
+                   ],
+    "tracks":  [
+                   {
+                       "id":  "prehistoric-winter",
+                       "displayName":  "Prehistoric Winter",
+                       "sourceSize":  {
+                                          "width":  1530,
+                                          "height":  724
+                                      },
+                       "laneBaselines":  [
+                                             443.25,
+                                             415.5,
+                                             387.75,
+                                             360,
+                                             471
+                                         ],
+                       "laneScales":  [
+                                          1,
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                      ],
+                       "parallax":  {
+                                        "background":  1,
+                                        "middle":  1,
+                                        "track":  1,
+                                        "foreground":  1
+                                    },
+                       "layers":  {
+                                      "background":  "assets/tracks/prehistoric-winter/prehistoric-winter-panning-background.png",
+                                      "middle":  null,
+                                      "track":  null,
+                                      "foreground":  null,
+                                      "startLine":  null,
+                                      "finishLine":  null
+                                  },
+                       "viewportSize":  {
+                                            "width":  1530,
+                                            "height":  724
+                                        },
+                       "worldSize":  {
+                                         "width":  2172,
+                                         "height":  724
+                                     },
+                       "raceLine":  {
+                                        "startX":  114,
+                                        "finishX":  1977
+                                    },
+                       "camera":  {
+                                      "followAfter":  "midpoint",
+                                      "ease":  "smootherstep",
+                                      "startCenter":  {
+                                                          "x":  762,
+                                                          "y":  362
+                                                      },
+                                      "endCenter":  {
+                                                        "x":  1408,
+                                                        "y":  362
+                                                    },
+                                      "durationMs":  2200
+                                  },
+                       "lanePaths":  [
+                                         {
+                                             "start":  {
+                                                           "x":  136.75,
+                                                           "y":  443.25
+                                                       },
+                                             "finish":  {
+                                                            "x":  1957.75,
+                                                            "y":  443.25
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  159.5,
+                                                           "y":  415.5
+                                                       },
+                                             "finish":  {
+                                                            "x":  1938.5,
+                                                            "y":  415.5
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  182.25,
+                                                           "y":  387.75
+                                                       },
+                                             "finish":  {
+                                                            "x":  1919.25,
+                                                            "y":  387.75
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  205,
+                                                           "y":  360
+                                                       },
+                                             "finish":  {
+                                                            "x":  1900,
+                                                            "y":  360
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  114,
+                                                           "y":  471
+                                                       },
+                                             "finish":  {
+                                                            "x":  1977,
+                                                            "y":  471
+                                                        }
+                                         }
+                                     ],
+                       "racerAnchor":  "center"
+                   },
+                   {
+                       "id":  "prehistoric-wilds",
+                       "displayName":  "Prehistoric Wilds",
+                       "sourceSize":  {
+                                          "width":  1530,
+                                          "height":  724
+                                      },
+                       "laneBaselines":  [
+                                             443.25,
+                                             415.5,
+                                             387.75,
+                                             360,
+                                             471
+                                         ],
+                       "laneScales":  [
+                                          1,
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                      ],
+                       "parallax":  {
+                                        "background":  1,
+                                        "middle":  1,
+                                        "track":  1,
+                                        "foreground":  1
+                                    },
+                       "layers":  {
+                                      "background":  "assets/tracks/prehistoric-wilds/prehistoric-wilds-panning-background.png",
+                                      "middle":  null,
+                                      "track":  null,
+                                      "foreground":  null,
+                                      "startLine":  null,
+                                      "finishLine":  null
+                                  },
+                       "viewportSize":  {
+                                            "width":  1530,
+                                            "height":  724
+                                        },
+                       "worldSize":  {
+                                         "width":  2172,
+                                         "height":  724
+                                     },
+                       "raceLine":  {
+                                        "startX":  114,
+                                        "finishX":  1977
+                                    },
+                       "camera":  {
+                                      "followAfter":  "midpoint",
+                                      "ease":  "smootherstep",
+                                      "startCenter":  {
+                                                          "x":  762,
+                                                          "y":  362
+                                                      },
+                                      "endCenter":  {
+                                                        "x":  1408,
+                                                        "y":  362
+                                                    },
+                                      "durationMs":  2200
+                                  },
+                       "lanePaths":  [
+                                         {
+                                             "start":  {
+                                                           "x":  136.75,
+                                                           "y":  443.25
+                                                       },
+                                             "finish":  {
+                                                            "x":  1957.75,
+                                                            "y":  443.25
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  159.5,
+                                                           "y":  415.5
+                                                       },
+                                             "finish":  {
+                                                            "x":  1938.5,
+                                                            "y":  415.5
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  182.25,
+                                                           "y":  387.75
+                                                       },
+                                             "finish":  {
+                                                            "x":  1919.25,
+                                                            "y":  387.75
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  205,
+                                                           "y":  360
+                                                       },
+                                             "finish":  {
+                                                            "x":  1900,
+                                                            "y":  360
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  114,
+                                                           "y":  471
+                                                       },
+                                             "finish":  {
+                                                            "x":  1977,
+                                                            "y":  471
+                                                        }
+                                         }
+                                     ],
+                       "racerAnchor":  "center"
+                   }
+               ]
+}
