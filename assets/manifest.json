@@ -449,6 +449,120 @@
                                          }
                                      ],
                        "racerAnchor":  "center"
+                   },
+                   {
+                       "id":  "prehistoric-canyon",
+                       "displayName":  "Prehistoric Canyon",
+                       "sourceSize":  {
+                                          "width":  1530,
+                                          "height":  724
+                                      },
+                       "laneBaselines":  [
+                                             443.25,
+                                             415.5,
+                                             387.75,
+                                             360,
+                                             471
+                                         ],
+                       "laneScales":  [
+                                          1,
+                                          1,
+                                          1,
+                                          1,
+                                          1
+                                      ],
+                       "parallax":  {
+                                        "background":  1,
+                                        "middle":  1,
+                                        "track":  1,
+                                        "foreground":  1
+                                    },
+                       "layers":  {
+                                      "background":  "assets/tracks/prehistoric-canyon/prehistoric-canyon-panning-background.png",
+                                      "middle":  null,
+                                      "track":  null,
+                                      "foreground":  null,
+                                      "startLine":  null,
+                                      "finishLine":  null
+                                  },
+                       "viewportSize":  {
+                                            "width":  1530,
+                                            "height":  724
+                                        },
+                       "worldSize":  {
+                                         "width":  2172,
+                                         "height":  724
+                                     },
+                       "raceLine":  {
+                                        "startX":  114,
+                                        "finishX":  1977
+                                    },
+                       "camera":  {
+                                      "followAfter":  "midpoint",
+                                      "ease":  "smootherstep",
+                                      "startCenter":  {
+                                                          "x":  762,
+                                                          "y":  362
+                                                      },
+                                      "endCenter":  {
+                                                        "x":  1408,
+                                                        "y":  362
+                                                    },
+                                      "durationMs":  2200
+                                  },
+                       "lanePaths":  [
+                                         {
+                                             "start":  {
+                                                           "x":  136.75,
+                                                           "y":  443.25
+                                                       },
+                                             "finish":  {
+                                                            "x":  1957.75,
+                                                            "y":  443.25
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  159.5,
+                                                           "y":  415.5
+                                                       },
+                                             "finish":  {
+                                                            "x":  1938.5,
+                                                            "y":  415.5
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  182.25,
+                                                           "y":  387.75
+                                                       },
+                                             "finish":  {
+                                                            "x":  1919.25,
+                                                            "y":  387.75
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  205,
+                                                           "y":  360
+                                                       },
+                                             "finish":  {
+                                                            "x":  1900,
+                                                            "y":  360
+                                                        }
+                                         },
+                                         {
+                                             "start":  {
+                                                           "x":  114,
+                                                           "y":  471
+                                                       },
+                                             "finish":  {
+                                                            "x":  1977,
+                                                            "y":  471
+                                                        }
+                                         }
+                                     ],
+                       "racerAnchor":  "center"
                    }
                ]
 }

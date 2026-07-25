@@ -69,11 +69,11 @@ test("ordinal suffixes handle teens", () => { assert.equal(ordinal(1), "1st"); a
 
 test("manifest stages preserve valid lane geometry and scale past twenty tracks", () => {
   const manifest = JSON.parse(readFileSync(new URL("../assets/manifest.json", import.meta.url), "utf8"));
-  assert.equal(manifest.tracks.length, 2);
+  assert.equal(manifest.tracks.length, 3);
   assert.ok(manifest.tracks.every((track) => track.id && track.displayName));
   assert.ok(manifest.characters.every((character) => character.id && character.displayName));
-  assert.deepEqual(manifest.tracks.map((track) => track.id), ["prehistoric-winter", "prehistoric-wilds"]);
-  assert.deepEqual(manifest.tracks.map((track) => track.displayName), ["Prehistoric Winter", "Prehistoric Wilds"]);
+  assert.deepEqual(manifest.tracks.map((track) => track.id), ["prehistoric-winter", "prehistoric-wilds", "prehistoric-canyon"]);
+  assert.deepEqual(manifest.tracks.map((track) => track.displayName), ["Prehistoric Winter", "Prehistoric Wilds", "Prehistoric Canyon"]);
   assert.ok(manifest.tracks.every((track) => JSON.stringify(track.laneBaselines) === JSON.stringify([443.25, 415.5, 387.75, 360, 471])));
   assert.ok(manifest.tracks.every((track) => track.laneBaselines.length === 5));
   assert.ok(manifest.tracks.every((track) => track.laneBaselines[4] > Math.max(...track.laneBaselines.slice(0, 4))));
