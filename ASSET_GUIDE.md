@@ -66,6 +66,37 @@ Camera centers are Photoshop/source coordinates, with positive Y moving down fro
 }
 ```
 
+## Shared stage alignment contract
+
+Prehistoric Winter, Prehistoric Wilds, and Prehistoric Canyon are registered as one panning-track family. Their backgrounds share the same image size, viewport, and camera rules. The race surface may either match the shared Winter/Wilds lane template or provide its own exact `lanePaths` when the painted track grid is different.
+
+Use these exact source-art values for panning stages:
+
+- Active background image: `2172 x 724`.
+- Visible camera/viewport: `1530 x 724`.
+- World size: `2172 x 724`.
+- Camera centers: start at `{ "x": 762, "y": 362 }`, end at `{ "x": 1408, "y": 362 }`.
+- Race line: match the player lane start and finish. Winter/Wilds use `{ "startX": 114, "finishX": 1977 }`; Canyon uses `{ "startX": 125, "finishX": 1897 }`.
+- Lane baselines, in manifest lane order: use the center point of each runner image for that track. Winter/Wilds use `443.25, 415.5, 387.75, 360, 471`; Canyon uses `484, 461, 438, 415, 507`.
+- Winter/Wilds lane paths:
+  - Lane 0: start `{ "x": 136.75, "y": 443.25 }`, finish `{ "x": 1957.75, "y": 443.25 }`
+  - Lane 1: start `{ "x": 159.5, "y": 415.5 }`, finish `{ "x": 1938.5, "y": 415.5 }`
+  - Lane 2: start `{ "x": 182.25, "y": 387.75 }`, finish `{ "x": 1919.25, "y": 387.75 }`
+  - Lane 3: start `{ "x": 205, "y": 360 }`, finish `{ "x": 1900, "y": 360 }`
+  - Player lane: start `{ "x": 114, "y": 471 }`, finish `{ "x": 1977, "y": 471 }`
+- Racer anchor: `"center"`.
+- Lane scales: all `1`.
+
+The visual road and manifest coordinates must agree. In practice, line up the start stripe, finish/checker stripe, lane separators, top track edge, bottom track edge, and foreground border before exporting. If a stage road is lower, higher, shorter, or has the checkers in a different X position, add stage-specific lane paths and verify them with an overlay before committing.
+
+Name new stages with a stable lowercase ID and a readable display name. Folder and file names must include the same ID, for example:
+
+```text
+assets/tracks/prehistoric-canyon/prehistoric-canyon-panning-background.png
+```
+
+Do not reuse an existing stage ID for new artwork after it has shipped; saved races refer to those IDs.
+
 ## Safe replacement checklist
 
 1. Keep filenames lowercase and use forward slashes in the manifest.
@@ -86,14 +117,14 @@ The current starter runner images were generated with the built-in image-generat
 
 ## Building a 20-stage roster
 
-The renderer loads every entry in `assets/manifest.json` and rotates stages deterministically by championship level and race number. The current build intentionally uses only two background maps: **Prehistoric Winter** and **Prehistoric Wilds**. More stages require no JavaScript changes later: copy a track folder, give the track a unique ID, and append its manifest entry.
+The renderer loads every entry in `assets/manifest.json` and rotates stages deterministically by championship level and race number. The current build includes three panning background maps: **Prehistoric Winter**, **Prehistoric Wilds**, and **Prehistoric Canyon**. More stages require no JavaScript changes later: copy a track folder, give the track a unique ID, and append its manifest entry.
 
 To keep every runner planted on the lanes without stretching, full-background stages and the race canvas use a consistent camera aspect ratio and these shared values:
 
-- Lane baselines: `518, 555, 596, 635, 681`
+- Lane baselines: `443.25, 415.5, 387.75, 360, 471`
 - Lane scales: `1, 1, 1, 1, 1`
 - The user remains on the bottom, closest lane.
-- Never set an independent CSS height on the canvas. Use `width: 100%; height: auto; aspect-ratio: 1823 / 863` so stages and runners remain proportional.
+- Never set an independent CSS height on the canvas. Use `width: 100%; height: auto; aspect-ratio: 1823 / 863` so the wrapper stays responsive; the renderer then sizes the backing canvas from each track's `viewportSize`.
 
 The `prehistoric-wilds` folder is the Stage 2 reference. Its generated source, `prehistoric-wilds-source.png`, is retained beside the aligned final image, `prehistoric-wilds-background.png`, and the active camera-ready background is `prehistoric-wilds-panning-background.png`, so future variations can be edited non-destructively.
 
@@ -109,7 +140,7 @@ Every character and stage must have two names in the manifest:
 
 Current character roster: **Nova** (`nova`), **Bolt** (`bolt`), **Moss** (`moss`), **Ember** (`ember`), and **Pixel** (`pixel`).
 
-Current stage roster: **Prehistoric Winter** (`prehistoric-winter`) and **Prehistoric Wilds** (`prehistoric-wilds`).
+Current stage roster: **Prehistoric Winter** (`prehistoric-winter`), **Prehistoric Wilds** (`prehistoric-wilds`), and **Prehistoric Canyon** (`prehistoric-canyon`).
 
 Never reuse or silently rename an existing ID after release, because saved races refer to it. New artwork should receive its recognizable name before being registered.
 ## Generated source filenames
