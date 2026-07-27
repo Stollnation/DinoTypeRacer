@@ -68,6 +68,12 @@ h3 { letter-spacing: -.025em; }
 .hero-stat { position: absolute; z-index: 4; left: 28px; bottom: 30px; padding: 15px 18px; border-radius: 14px; background: rgba(255,255,255,.9); box-shadow: 0 12px 30px rgba(16,26,53,.18); }
 .hero-stat strong, .hero-stat span { display: block; }.hero-stat span { color: var(--ink-soft); font-size: .76rem; }
 .test-screen, .dashboard-screen, .race-screen, .results-screen, .library-screen { padding: 54px 0 64px; }
+.screen-nav { display: flex; justify-content: flex-end; gap: 8px; margin: -22px 0 12px; }
+.screen-nav .secondary { min-height: 34px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,.72); font-size: .78rem; }
+.screen-nav .secondary:disabled { cursor: not-allowed; opacity: .45; transform: none; }
+.race-screen .screen-nav { position: relative; z-index: 3; margin: 0 0 7px; }
+.dashboard-screen.active .screen-nav { margin: -8px 0 4px; }
+.results-screen .screen-nav, .podium-screen .screen-nav { justify-content: center; margin: 0 0 12px; }
 .section-heading, .dashboard-head, .race-topline { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; margin-bottom: 34px; }
 .section-heading > div > p:not(.eyebrow), .dashboard-head > div > p:not(.eyebrow) { color: var(--ink-soft); font-size: 1.05rem; }
 .timer-orb { display: grid; place-items: center; align-content: center; width: 126px; height: 126px; flex: 0 0 auto; border: 7px solid var(--coral); border-radius: 50%; background: white; box-shadow: var(--shadow); }

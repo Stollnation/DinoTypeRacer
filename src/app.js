@@ -47,6 +47,7 @@ let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
 let replayingCompletedRace = null;
+let applyingHistoryState = false;
 
 async function init() {
   manifest = await fetch("assets/manifest.json").then((response) => response.json());
@@ -62,7 +63,7 @@ async function init() {
   bindEvents();
   renderCharacters();
   renderPassageList();
-  if (data.profile.calibration) showDashboard(); else showScreen("welcome");
+  if (data.profile.calibration) showDashboard({ historyMode: "replace" }); else showScreen("welcome", { historyMode: "replace" });
 }
 async function installBundledPassages() {
   if ((data.libraryVersion || 0) >= 5) { normalizeBuiltInPassageData(); loadActiveProfileLibrary(); return; }
@@ -157,16 +158,76 @@ function renderThemeOptions() {
   $("#themeSelect").innerHTML = THEMES.map((theme) => `<option value="${theme.id}">${theme.name}</option>`).join("");
 }
 
-function showScreen(name) {
+function screenHash(name) {
+  return name === "dashboard" ? "ready" : name;
+}
+
+function screenFromHash() {
+  const value = window.location.hash.replace(/^#/, "");
+  if (value === "ready") return "dashboard";
+  return screens[value] ? value : null;
+}
+
+function pushScreenHistory(name, mode = "push") {
+  if (applyingHistoryState || mode === "none") return;
+  const url = new URL(window.location.href);
+  url.hash = screenHash(name);
+  const state = { screen: name };
+  if (mode === "replace" || !history.state?.screen) history.replaceState(state, "", url);
+  else history.pushState(state, "", url);
+}
+
+function renderGlobalNavigation() {
+  const hasFinish = Boolean(lastRaceResult || data.records[0]);
+  $$('[data-action="finish-screen"]').forEach((button) => {
+    button.disabled = !hasFinish;
+    button.title = hasFinish ? "Open the latest finish screen" : "Finish a race to unlock this";
+  });
+}
+
+function showScreen(name, { historyMode = "push" } = {}) {
   currentScreen = name;
   document.body.dataset.screen = name;
   Object.entries(screens).forEach(([key, node]) => node.classList.toggle("active", key === name));
+  renderGlobalNavigation();
+  pushScreenHistory(name, historyMode);
   window.scrollTo({ top: 0, behavior: data.settings.reducedMotion ? "auto" : "smooth" });
 }
 
-function home() { clearTimeout(raceFinishTimer); if (raceActive) pauseRace(true); data.profile.calibration ? showDashboard({ preserveRace: raceActive }) : showScreen("welcome"); }
+function home({ historyMode = "push" } = {}) { clearTimeout(raceFinishTimer); if (raceActive) pauseRace(true); data.profile.calibration ? showDashboard({ preserveRace: raceActive, historyMode }) : showScreen("welcome", { historyMode }); }
 
-function showDashboard({ preserveRace = false } = {}) {
+function showFinishScreen({ historyMode = "push" } = {}) {
+  const result = data.records[0] || lastRaceResult;
+  if (!result) { toast("Finish a race to unlock the finish screen."); renderGlobalNavigation(); return; }
+  lastRaceResult = result;
+  if (currentScreen === "race") {
+    if (raceActive && performance.now() < raceCountdownEnd) { toast("The race is about to start."); return; }
+    if (raceActive && racePausedAt === null) pauseRace(true);
+    cancelAnimationFrame(raceFrame);
+    historicalReturnScreen = "race";
+  } else {
+    historicalReturnScreen = "dashboard";
+  }
+  renderResults(result, { historical: true });
+  showScreen("results", { historyMode });
+}
+
+function restoreScreenFromHistory(screen) {
+  applyingHistoryState = true;
+  try {
+    if (screen === "dashboard") showDashboard({ preserveRace: raceActive });
+    else if (screen === "library") showLibrary();
+    else if (screen === "results") showFinishScreen();
+    else if (screen === "podium" && championship?.rounds?.length) renderPodium();
+    else if (screen === "race" && raceSession) showScreen("race");
+    else if (screen === "calibration") showScreen("calibration");
+    else showScreen(data.profile.calibration ? "dashboard" : "welcome");
+  } finally {
+    applyingHistoryState = false;
+  }
+}
+
+function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   cancelAnimationFrame(calibrationFrame);
   clearTimeout(raceFinishTimer);
   if (!preserveRace) raceActive = false;
@@ -185,7 +246,7 @@ function showDashboard({ preserveRace = false } = {}) {
   $("#returnToRacesButton").classList.toggle("hidden", !raceActive && !championship?.rounds?.length);
   renderAiPaceControl();
   renderCharacters();
-  showScreen("dashboard");
+  showScreen("dashboard", { historyMode });
 }
 
 function startCalibration() {
@@ -819,19 +880,8 @@ function saveDashboardProfile(event) {
   showDashboard();
   toast(`Player saved: ${name}`);
 }
-function showLastResults() {
-  const result = data.records[0] || lastRaceResult;
-  if (!result) { toast("Finish a race to unlock results."); return; }
-  if (currentScreen === "race") {
-    if (raceActive && performance.now() < raceCountdownEnd) { toast("The race is about to start."); return; }
-    if (raceActive && racePausedAt === null) pauseRace(true);
-    cancelAnimationFrame(raceFrame);
-    historicalReturnScreen = "race";
-  } else {
-    historicalReturnScreen = "dashboard";
-  }
-  renderResults(result, { historical: true });
-  showScreen("results");
+function showLastResults({ historyMode = "push" } = {}) {
+  showFinishScreen({ historyMode });
 }
 
 function returnFromResults() {
@@ -918,7 +968,7 @@ function recordLevelAttempt() {
   persist();
 }
 
-function renderPodium() {
+function renderPodium({ historyMode = "push" } = {}) {
   recordLevelAttempt();
   const standings = championshipStandings(championship?.rounds || []);
   const playerPlace = standings.findIndex((racer) => racer.id === "player") + 1;
@@ -941,7 +991,7 @@ function renderPodium() {
   const podiumArt = manifest.ui?.podiumBackground;
   $("#podiumStage").style.backgroundImage = podiumArt ? `url("${podiumArt}")` : "";
   $("#podiumStage").classList.toggle("has-custom-art", Boolean(podiumArt));
-  showScreen("podium");
+  showScreen("podium", { historyMode });
 }
 
 function retryLevel() {
@@ -972,7 +1022,7 @@ function continueChampionship() {
   persist();
   if (nextWasCompleted) showDashboard(); else startChampionship({ skipReplayCharge: true });
 }
-function showLibrary() { renderPassageList(); editPassage(editorPassageId || data.passages[0]?.id); showScreen("library"); }
+function showLibrary({ historyMode = "push" } = {}) { renderPassageList(); editPassage(editorPassageId || data.passages[0]?.id); showScreen("library", { historyMode }); }
 
 function renderPassageList() {
   const groups = new Map();
@@ -1074,9 +1124,11 @@ function bindEvents() {
   $("#importFile").addEventListener("change", async (event) => { const file = event.target.files[0]; if (!file) return; try { const incoming = importPassages(await file.text()); const map = new Map(data.passages.map((item) => [item.id, item])); incoming.forEach((item) => map.set(item.id, item)); data.passages = [...map.values()]; selectedPassageCategory = incoming[0].category || selectedPassageCategory; selectedPassageId = incoming[0].id; persist(); renderPassageGroupControl(); editPassage(incoming[0].id); toast(`Imported ${incoming.length} passage${incoming.length === 1 ? "" : "s"} into ${selectedPassageCategory}.`); } catch (error) { toast(error.message); } event.target.value = ""; });
   document.addEventListener("keydown", handleTypingKey);
   window.addEventListener("blur", () => { if (raceActive && racePausedAt === null) pauseRace(true); });
+  window.addEventListener("popstate", (event) => restoreScreenFromHistory(event.state?.screen || screenFromHash() || (data.profile.calibration ? "dashboard" : "welcome")));
   document.addEventListener("click", (event) => {
     const action = event.target.closest("[data-action]")?.dataset.action;
     if (action === "home") home();
+    if (action === "finish-screen") showFinishScreen();
     if (action === "library") showLibrary();
     if (action === "cancel-test") data.profile.calibration ? showDashboard() : showScreen("welcome");
     if (action === "retest") startCalibration();

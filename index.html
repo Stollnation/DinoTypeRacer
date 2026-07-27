@@ -44,6 +44,7 @@
         </section>
 
         <section class="screen test-screen" id="calibrationScreen" aria-labelledby="testTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="section-heading">
             <div><p class="eyebrow">First-run calibration</p><h2 id="testTitle">Set your starting pace</h2><p>Choose how mistakes behave, then type for 60 seconds.</p></div>
             <div class="timer-orb"><strong id="calibrationTimer">60</strong><span>seconds</span></div>
@@ -65,6 +66,7 @@
         </section>
 
         <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="dashboard-head">
             <div><p class="eyebrow">Race control</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace.</p><form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" maxlength="24" autocomplete="nickname" required /><button class="secondary compact" type="submit">Save player</button></form></div>
             <div class="baseline-card"><span>Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button></div>
@@ -96,6 +98,7 @@
           <div class="launch-bar"><div><span>Challenge group</span><label class="passage-group-picker">Passages <select id="passageGroupSelect" aria-label="Passage group"></select></label><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong><button class="inline-button" data-action="library">View passages</button></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start five races <span>&rarr;</span></button></div></div>        </section>
 
         <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="race-topline">
             <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
             <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="pause">Pause</button></div>
@@ -108,6 +111,7 @@
         </section>
 
         <section class="screen results-screen" id="resultsScreen" aria-labelledby="resultsTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <p class="eyebrow" id="resultRaceLabel">Race 1 complete</p>
           <h2 id="resultsTitle">1st Place</h2>
           <p class="results-summary" id="resultsSummary"></p><div class="perfect-result-badge hidden" id="perfectResultBadge">Perfect!</div>
@@ -140,6 +144,7 @@
         </dialog>
 
         <section class="screen podium-screen" id="podiumScreen" aria-labelledby="podiumTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <p class="eyebrow">Championship complete</p>
           <h2 id="podiumTitle">The final podium.</h2>
           <p class="podium-summary">Five races decided the standings. Here are the top three.</p>
@@ -152,6 +157,7 @@
         </section>
 
         <section class="screen library-screen" id="libraryScreen" aria-labelledby="libraryTitle">
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="section-heading"><div><p class="eyebrow">Content studio</p><h2 id="libraryTitle">Passage library</h2><p>Create and manage the sentences and paragraphs used in races.</p></div><button class="secondary" data-action="dashboard">Done</button></div>
           <div class="library-grid">
             <div class="passage-list-panel"><div class="library-toolbar"><button class="primary compact" data-action="new-passage">+ New passage</button><button class="secondary compact" data-action="export-passages">Export TXT</button><label class="secondary compact file-label">Import TXT<input id="importFile" type="file" accept="text/plain,.txt" /></label></div><div class="passage-list" id="passageList"></div></div>
