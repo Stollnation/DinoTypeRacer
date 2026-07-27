@@ -10,6 +10,10 @@ npm run dev
 
 Open `http://127.0.0.1:4174`. Use `npm test` for logic checks and `npm run build` to create the deployable `dist` folder. See `GITHUB_PLAY.md` for the GitHub Pages / downloaded-folder play notes.
 
+## Netlify
+
+This repo is ready for Netlify as a static site. Use `npm run build` as the build command and `dist` as the publish directory.
+
 ## Data
 
 The player profile, calibration, settings, custom passages, race records, and best replay are stored only in browser local storage under `typing-race:v1`. There are no accounts, analytics, network services, or online multiplayer.

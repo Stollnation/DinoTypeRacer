@@ -68,7 +68,7 @@
         <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
           <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="dashboard-head">
-            <div><p class="eyebrow">Race control</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace.</p><form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" maxlength="24" autocomplete="nickname" required /><button class="secondary compact" type="submit">Save player</button></form></div>
+            <div><p class="eyebrow">Race control</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace.</p><form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" maxlength="24" autocomplete="nickname" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Load</button></form></div>
             <div class="baseline-card"><span>Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button></div>
           </div>
 
@@ -86,7 +86,6 @@
             <div class="setup-panel runner-control-panel">
               <div class="panel-title"><span>02</span><div><h3>Choose your runner</h3><p>Your selection is saved with this player.</p></div></div>
               <div class="runner-summary" id="selectedRunnerPreview"></div>
-              <button class="secondary runner-more-button" data-action="open-runners">More runners</button>
               <p class="runner-note">More runner options will appear here automatically when they are added to the character manifest.</p>
             </div>
           </div>
@@ -123,15 +122,19 @@
             <aside class="standings-panel"><span>Level points</span><div class="series-standings" id="seriesStandings"></div></aside>
           </div>
           <div class="replay-usage" id="replayUsage" aria-live="polite"></div>
-          <div class="results-actions"><button class="primary hidden" id="returnFromResultsButton" data-action="return-from-results">Return to race</button><button class="secondary" id="mistakeStatsButton" data-action="open-mistakes">Mistake Stats</button><button class="secondary" id="retryRaceButton" data-action="retry-race">Retry race</button><button class="secondary hidden" id="viewPodiumButton" data-action="view-podium">View Podium</button><button class="primary" id="nextRaceButton" data-action="next-race">Next race</button><button class="secondary" id="resultsDashboardButton" data-action="dashboard">Race control</button></div>
+          <div class="results-actions"><button class="primary hidden" id="returnFromResultsButton" data-action="return-from-results">Return to race</button><button class="secondary" id="mistakeStatsButton" data-action="open-mistakes">Mistake Stats</button><button class="secondary" id="leaderboardButton" data-action="open-leaderboard">Leaderboard</button><button class="secondary" id="retryRaceButton" data-action="retry-race">Retry race</button><button class="secondary hidden" id="viewPodiumButton" data-action="view-podium">View Podium</button><button class="primary" id="nextRaceButton" data-action="next-race">Next race</button><button class="secondary" id="resultsDashboardButton" data-action="dashboard">Race control</button></div>
         </section>
 
         <dialog id="runnerDialog" class="runner-dialog" aria-labelledby="runnerDialogTitle">
           <button class="dialog-close" data-action="close-runners" aria-label="Close runner menu">&times;</button>
+          <div class="runner-dialog-actions"><button class="secondary" data-action="close-runners">Cancel</button><button class="primary" data-action="accept-runner">Accept runner</button></div>
           <p class="eyebrow">Runner roster</p>
-          <h3 id="runnerDialogTitle">Choose your runner</h3>
-          <p class="runner-dialog-copy">Every runner registered in the character manifest appears here automatically.</p>
-          <div class="character-grid" id="characterGrid" role="radiogroup" aria-label="Runner"></div>
+          <h3 id="runnerDialogTitle">Choose your dinosaur</h3>
+          <p class="runner-dialog-copy">Pick a dinosaur to preview it, then accept it as your runner.</p>
+          <div class="runner-picker-layout">
+            <div class="runner-picker-preview" id="runnerPickerPreview"></div>
+            <div class="character-grid" id="characterGrid" role="radiogroup" aria-label="Runner"></div>
+          </div>
         </dialog>
         <dialog id="mistakeDialog" class="mistake-dialog" aria-labelledby="mistakeDialogTitle">
           <button class="dialog-close" data-action="close-mistakes" aria-label="Close mistake stats">×</button>
@@ -141,6 +144,13 @@
           <section><h4>Most missed keys</h4><div id="mistakeChart" class="mistake-chart"></div></section>
           <section><h4>Key confusions</h4><div id="mistakeConfusions" class="mistake-confusions"></div></section>
           <section><h4>Where they happened</h4><div id="mistakeContexts" class="mistake-contexts"></div></section>
+        </dialog>
+        <dialog id="leaderboardDialog" class="leaderboard-dialog" aria-labelledby="leaderboardDialogTitle">
+          <button class="dialog-close" data-action="close-leaderboard" aria-label="Close leaderboard">&times;</button>
+          <p class="eyebrow">Race records</p>
+          <h3 id="leaderboardDialogTitle">Leaderboard</h3>
+          <p id="leaderboardSummary" class="leaderboard-summary"></p>
+          <div class="leaderboard-table" id="leaderboardTable"></div>
         </dialog>
 
         <section class="screen podium-screen" id="podiumScreen" aria-labelledby="podiumTitle">

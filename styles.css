@@ -192,7 +192,7 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .ai-pace-range { margin: 20px 0 4px; color: var(--ink); font-weight: 900; }
 .ai-pace-control > small { color: var(--ink-soft); line-height: 1.45; }
 .runner-control-panel { display: flex; flex-direction: column; }
-.runner-summary { display: flex; align-items: center; gap: 18px; min-height: 142px; padding: 12px 18px; overflow: visible; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.78); }
+.runner-summary { display: flex; align-items: center; gap: 18px; min-height: 142px; padding: 12px 18px; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: rgba(255,255,255,.78); }
 .runner-summary img { width: 124px; height: 124px; flex: 0 0 auto; object-fit: contain; transform: none; }
 .runner-summary span, .runner-summary strong, .runner-summary small { display: block; }
 .runner-summary span { color: var(--ink-soft); font-size: .68rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
@@ -200,9 +200,9 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
 .runner-summary small, .runner-note, .runner-dialog-copy { color: var(--ink-soft); }
 .runner-more-button { align-self: flex-start; margin-top: 12px; }
 .runner-note { margin: 12px 0 0; font-size: .75rem; line-height: 1.45; }
-.runner-dialog { width: min(1050px, 88vw); max-height: 82vh; overflow: auto; }
+.runner-dialog { width: min(1260px, 92vw); max-height: 88vh; overflow: auto; }
 .runner-dialog h3 { margin: 3px 0 4px; }
-.runner-dialog .character-grid { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); margin-top: 24px; }
+.runner-dialog .character-grid { grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); grid-auto-flow: dense; margin-top: 24px; }
 .launch-actions { display: flex; align-items: center; gap: 10px; }
 .launch-bar .launch-actions .secondary { color: var(--ink); background: #f4ebdd; }
 @media (max-width: 900px) { .race-controls-grid { grid-template-columns: 1fr; } .launch-bar { align-items: flex-start; gap: 18px; } .launch-actions { flex-wrap: wrap; justify-content: flex-end; } }
@@ -898,3 +898,155 @@ body[data-theme="forest-trail"] .typing-card::before { background: var(--dry-sag
 
 .helper-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-soft); font-size: .72rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .helper-toggle select { min-height: 34px; min-width: 122px; border: 1px solid var(--line); border-radius: 9px; background: white; padding: 0 10px; color: var(--ink); font-size: .8rem; font-weight: 850; letter-spacing: 0; text-transform: none; }
+
+/* Larger racer selection and local leaderboard */
+.results-actions { flex-wrap: wrap; }
+.leaderboard-dialog { width: min(920px, 88vw); max-height: 82vh; overflow: auto; text-align: left; }
+.leaderboard-summary { color: var(--ink-soft); }
+.leaderboard-table { display: grid; gap: 7px; margin-top: 18px; }
+.leaderboard-table > div { display: grid; grid-template-columns: 44px minmax(120px, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.72); }
+.leaderboard-table > div.is-player { border-color: var(--coral); background: #eef4e9; }
+.leaderboard-table span { grid-row: 1 / 3; color: var(--cyan); font-size: 1.35rem; font-weight: 950; text-align: center; }
+.leaderboard-table strong { font-size: .98rem; }
+.leaderboard-table b { justify-self: end; font-size: 1rem; }
+.leaderboard-table small { grid-column: 2 / 4; color: var(--ink-soft); }
+.leaderboard-empty { margin: 0; color: var(--ink-soft); }
+.dashboard-screen.active .setup-grid { grid-template-columns: minmax(380px, .82fr) minmax(520px, 1.18fr); }
+.dashboard-screen.active .runner-control-panel .runner-summary { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(180px, .48fr); gap: clamp(18px, 2.5vw, 38px); align-items: center; justify-content: stretch; padding: 18px clamp(22px, 2.6vw, 44px); }
+.dashboard-screen.active .runner-summary img { justify-self: center; width: min(100%, 440px); height: min(100%, 330px); object-fit: contain; object-position: center; }
+.dashboard-screen.active .runner-summary strong { font-size: clamp(1.8rem, 3.4dvh, 2.65rem); }
+.dashboard-screen.active .runner-summary small { font-size: .9rem; }
+.runner-picker-layout { display: grid; grid-template-columns: minmax(360px, .95fr) minmax(430px, 1.05fr); gap: 24px; align-items: stretch; margin-top: 24px; }
+.runner-picker-preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; min-height: 560px; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.8); }
+.runner-picker-preview img { align-self: center; justify-self: center; width: 100%; height: min(62vh, 470px); padding: 18px; object-fit: contain; }
+.runner-picker-preview div { padding: 18px 22px; border-top: 1px solid var(--line); background: white; }
+.runner-picker-preview span, .runner-picker-preview strong, .runner-picker-preview small { display: block; }
+.runner-picker-preview span { color: var(--ink-soft); font-size: .7rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.runner-picker-preview strong { margin: 4px 0; font-size: 2.4rem; }
+.runner-picker-preview small { color: var(--ink-soft); }
+.runner-dialog .character-grid { align-content: start; max-height: 560px; overflow: auto; padding: 3px; }
+.runner-dialog .character-card { min-height: 200px; }
+.runner-dialog .character-card img { height: 158px; }
+.runner-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+@media (max-height: 820px) {
+  .dashboard-screen.active .runner-summary img { height: min(100%, 270px); }
+  .runner-picker-preview { min-height: 470px; }
+  .runner-picker-preview img { height: min(58vh, 380px); }
+  .runner-dialog .character-grid { max-height: 470px; }
+}
+
+/* Keep the Ready-page runner art inside its preview frame. */
+.dashboard-screen.active .runner-control-panel {
+  grid-template-rows: auto auto auto;
+}
+.dashboard-screen.active .runner-control-panel .runner-summary {
+  height: clamp(250px, 32dvh, 340px);
+  min-height: 0;
+  align-self: start;
+  grid-template-columns: minmax(320px, 1fr) minmax(220px, .46fr);
+  padding: 18px clamp(22px, 2.6vw, 44px);
+}
+.dashboard-screen.active .runner-summary img {
+  align-self: center;
+  max-width: 100%;
+  width: auto;
+  height: calc(100% - 22px);
+  max-height: 300px;
+  object-fit: contain;
+}
+.dashboard-screen.active .runner-summary > div {
+  align-self: center;
+  min-width: 0;
+  padding-bottom: 4px;
+}
+@media (max-height: 820px) {
+  .dashboard-screen.active .runner-control-panel .runner-summary {
+    height: clamp(220px, 30dvh, 285px);
+  }
+  .dashboard-screen.active .runner-summary img {
+    max-height: 245px;
+  }
+}
+
+/* Final Ready-page control alignment */
+.dashboard-screen.active .dashboard-head {
+  align-items: flex-start;
+  padding-top: 4px;
+}
+.dashboard-screen.active .dashboard-head h2 {
+  margin-bottom: 7px;
+}
+.dashboard-screen.active .dashboard-head > div > p:not(.eyebrow) {
+  margin-bottom: 9px;
+}
+.dashboard-screen.active .ready-profile {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) auto auto;
+  align-items: end;
+  gap: 8px;
+  max-width: 620px;
+  margin-top: 8px;
+}
+.dashboard-screen.active .ready-profile label {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+.dashboard-screen.active .ready-profile input {
+  width: 100%;
+}
+.dashboard-screen.active .ready-profile .compact {
+  min-width: 88px;
+  min-height: 36px;
+}
+.dashboard-screen.active .runner-summary > div {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+.dashboard-screen.active .runner-summary .runner-more-button {
+  margin-top: 10px;
+  justify-self: start;
+}
+.runner-dialog {
+  position: relative;
+  padding-top: 74px;
+}
+.runner-dialog .dialog-close {
+  top: 16px;
+}
+.runner-dialog-actions {
+  position: absolute;
+  top: 16px;
+  right: 62px;
+  margin: 0;
+}
+
+/* Keep Ready-page profile controls on one clean row. */
+.dashboard-screen.active .ready-profile {
+  grid-template-columns: auto minmax(220px, 300px) auto auto;
+  align-items: center;
+  width: fit-content;
+  max-width: none;
+  margin-top: 12px;
+}
+.dashboard-screen.active .ready-profile label {
+  display: block !important;
+  align-self: center;
+  width: auto;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.dashboard-screen.active .ready-profile label::before {
+  content: none !important;
+}
+.dashboard-screen.active .ready-profile input {
+  min-height: 38px;
+}
+.dashboard-screen.active .ready-profile .compact {
+  min-width: 98px;
+}

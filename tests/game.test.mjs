@@ -152,7 +152,7 @@ test("race controls expose only difficulty and the scalable runner picker", () =
   assert.match(html, /id="aiPaceSlider"/);
   assert.match(html, /id="focusKeyHelperSelect"/);
   assert.match(html, /data-action="return-to-races"/);
-  assert.match(html, /data-action="open-runners"/);
+  assert.match(app, /data-action="open-runners"/);
   assert.match(html, /id="runnerDialog"/);
   assert.doesNotMatch(html, /data-mode=/);
   assert.doesNotMatch(html, /id="difficultySelect"/);
@@ -376,7 +376,7 @@ test("completed levels reopen all five saved races and runner cards show complet
   assert.match(app, /function updateRecordedLevelAttempt/);
   assert.match(app, /renderResults\(result, \{ levelReview: true \}\)/);
   assert.match(css, /\.character-card img \{[^}]*object-fit: contain; transform: none;/);
-  assert.match(css, /\.runner-summary \{[^}]*overflow: visible;/);
+  assert.match(css, /\.runner-summary \{[^}]*overflow: hidden;/);
   assert.match(css, /dashboard-screen\.active \.runner-summary img \{[^}]*transform: none;/);
 });
 

@@ -4,6 +4,7 @@ export function defaultState() {
   return {
     version: 1,
     profile: { name: "", characterId: "nova", calibration: null },
+    playerProfiles: {},
     profileLibraries: {},
     settings: { muted: false, reducedMotion: false, highContrast: false, aiPaceOffset: 0, theme: "sunset-sprint", focusKeyHelper: true },
     passages: structuredClone(STARTER_PASSAGES),
@@ -23,6 +24,7 @@ export function loadState(storage = localStorage) {
       ...fallback,
       ...saved,
       profile: { ...fallback.profile, ...(saved.profile || {}) },
+      playerProfiles: saved.playerProfiles && typeof saved.playerProfiles === "object" ? saved.playerProfiles : {},
       profileLibraries: saved.profileLibraries && typeof saved.profileLibraries === "object" ? saved.profileLibraries : {},
       settings: { ...fallback.settings, ...(saved.settings || {}) },
       passages: (Array.isArray(saved.passages) && saved.passages.length ? saved.passages : fallback.passages).map((passage) => ({ ...passage, category: passage.category || "General" })),

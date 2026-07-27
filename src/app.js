@@ -48,6 +48,7 @@ let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
 let replayingCompletedRace = null;
 let applyingHistoryState = false;
+let previewCharacterId = data.profile.characterId;
 
 async function init() {
   manifest = await fetch("assets/manifest.json").then((response) => response.json());
@@ -147,10 +148,54 @@ function loadActiveProfileLibrary(name = data.profile.name) {
   }
 }
 
+function profileSnapshot(name = data.profile.name) {
+  return {
+    profile: { ...data.profile, name },
+    records: structuredClone(data.records || []),
+    bestReplay: data.bestReplay ? structuredClone(data.bestReplay) : null,
+    activeChampionship: data.activeChampionship ? structuredClone(data.activeChampionship) : null,
+    progression: data.progression ? structuredClone(data.progression) : null,
+    progressionByCategory: structuredClone(data.progressionByCategory || {}),
+    selectedPassageId,
+    selectedPassageCategory,
+  };
+}
+
+function saveActivePlayerProfile(name = data.profile.name) {
+  if (!String(name || "").trim()) return;
+  data.playerProfiles ||= {};
+  data.playerProfiles[profileKey(name)] = profileSnapshot(name);
+}
+
+function loadPlayerProfile(name) {
+  const requestedName = String(name || "").trim();
+  if (!requestedName) return false;
+  data.playerProfiles ||= {};
+  if (data.profile.name) saveActivePlayerProfile(data.profile.name);
+  const saved = data.playerProfiles[profileKey(requestedName)];
+  if (!saved) return false;
+  data.profile = { name: requestedName, characterId: "nova", calibration: null, ...(saved.profile || {}), name: requestedName };
+  data.records = Array.isArray(saved.records) ? structuredClone(saved.records) : [];
+  data.bestReplay = saved.bestReplay ? structuredClone(saved.bestReplay) : null;
+  data.progressionByCategory = saved.progressionByCategory ? structuredClone(saved.progressionByCategory) : {};
+  data.progression = saved.progression ? structuredClone(saved.progression) : undefined;
+  data.activeChampionship = saved.activeChampionship ? structuredClone(saved.activeChampionship) : null;
+  championship = data.activeChampionship;
+  selectedPassageId = saved.selectedPassageId || data.selectedPassageId || data.passages[0]?.id;
+  selectedPassageCategory = saved.selectedPassageCategory || data.selectedPassageCategory || "Biblical Passages";
+  loadActiveProfileLibrary(requestedName);
+  lastRaceResult = data.records[0] || null;
+  reviewingCompletedLevel = false;
+  selectedReviewResult = null;
+  replayingCompletedRace = null;
+  return true;
+}
+
 function persist() {
   data.selectedPassageId = selectedPassageId;
   data.selectedPassageCategory = selectedPassageCategory;
   saveActiveProfileLibrary();
+  saveActivePlayerProfile();
   saveState(data);
 }
 
@@ -185,12 +230,17 @@ function renderGlobalNavigation() {
   });
 }
 
+function screenTitle(name) {
+  return `${CONFIG.title} - ${name[0].toUpperCase()}${name.slice(1)}`;
+}
+
 function showScreen(name, { historyMode = "push" } = {}) {
   currentScreen = name;
   document.body.dataset.screen = name;
   Object.entries(screens).forEach(([key, node]) => node.classList.toggle("active", key === name));
   renderGlobalNavigation();
   pushScreenHistory(name, historyMode);
+  document.title = screenTitle(name);
   window.scrollTo({ top: 0, behavior: data.settings.reducedMotion ? "auto" : "smooth" });
 }
 
@@ -363,8 +413,11 @@ function renderCharacters() {
   if (!manifest) return;
   const selected = manifest.characters.find((character) => character.id === data.profile.characterId) || manifest.characters[0];
   if (selected && data.profile.characterId !== selected.id) data.profile.characterId = selected.id;
-  $("#selectedRunnerPreview").innerHTML = selected ? `<img src="${selected.portrait}" alt=""><div><span>Selected runner</span><strong>${escapeHtml(selected.displayName)}</strong><small>${manifest.characters.length} runner${manifest.characters.length === 1 ? "" : "s"} available</small></div>` : "";
-  $("#characterGrid").innerHTML = manifest.characters.map((character) => `<button class="character-card ${data.profile.characterId === character.id ? "selected" : ""}" data-character="${character.id}" role="radio" aria-checked="${data.profile.characterId === character.id}"><img src="${character.portrait}" alt="${escapeHtml(character.displayName)}"><span>${escapeHtml(character.displayName)}</span></button>`).join("");
+  if (!manifest.characters.some((character) => character.id === previewCharacterId)) previewCharacterId = selected?.id;
+  const preview = manifest.characters.find((character) => character.id === previewCharacterId) || selected;
+  $("#selectedRunnerPreview").innerHTML = selected ? `<img src="${selected.portrait}" alt=""><div><span>Selected runner</span><strong>${escapeHtml(selected.displayName)}</strong><small>${manifest.characters.length} runner${manifest.characters.length === 1 ? "" : "s"} available</small><button class="secondary compact runner-more-button" data-action="open-runners">More runners</button></div>` : "";
+  $("#runnerPickerPreview").innerHTML = preview ? `<img src="${preview.portrait}" alt=""><div><span>Previewing</span><strong>${escapeHtml(preview.displayName)}</strong><small>${preview.id === data.profile.characterId ? "Current runner" : "Ready to accept"}</small></div>` : "";
+  $("#characterGrid").innerHTML = manifest.characters.map((character) => `<button class="character-card ${preview?.id === character.id ? "selected" : ""}" data-character="${character.id}" role="radio" aria-checked="${preview?.id === character.id}"><img src="${character.portrait}" alt="${escapeHtml(character.displayName)}"><span>${escapeHtml(character.displayName)}</span></button>`).join("");
 }
 
 function aiPaceBaseWpm() {
@@ -759,7 +812,7 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   if (replacedRace) updateRecordedLevelAttempt();
   updateChampionshipBaseline();
   data.activeChampionship = championship;
-  data.records.unshift(result); data.records = data.records.slice(0, 100);
+  data.records.unshift(result); data.records = data.records.slice(0, 5000);
   if (!data.bestReplay || time < data.bestReplay.time) data.bestReplay = { playerName: result.playerName, time, wpm: result.wpm, passageId: raceSetup.passage.id, samples: raceSession.samples.map((sample) => ({ t: sample.t, p: sample.p })) };
   persist(); lastRaceResult = result;
   selectedReviewResult = reviewingCompletedLevel ? result : selectedReviewResult;
@@ -824,6 +877,24 @@ function renderResults(result, { historical = false, levelReview = false } = {})
   renderMistakeStats(result, mistakeScope);
 }
 
+function leaderboardRows() {
+  const records = new Map();
+  Object.values(data.playerProfiles || {}).forEach((profile) => {
+    (profile.records || []).forEach((record) => records.set(record.id, record));
+  });
+  (data.records || []).forEach((record) => records.set(record.id, record));
+  return [...records.values()]
+    .filter((record) => Number.isFinite(record.wpm) && Number.isFinite(record.accuracy))
+    .sort((a, b) => b.wpm - a.wpm || b.accuracy - a.accuracy || a.time - b.time)
+    .map((record, index) => ({ ...record, rank: index + 1 }));
+}
+
+function renderLeaderboard() {
+  const rows = leaderboardRows();
+  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} local race entr${rows.length === 1 ? "y" : "ies"} saved in this browser. Showing the top 100.` : "Finish a race to add the first leaderboard entry.";
+  $("#leaderboardTable").innerHTML = rows.length ? rows.slice(0, 100).map((record) => `<div class="${record.playerName === data.profile.name ? "is-player" : ""}"><span>${record.rank}</span><strong>${escapeHtml(record.playerName || "Racer")}</strong><b>${Math.round(record.wpm)} WPM</b><small>Level ${record.level || 1} - Race ${record.roundNumber || 1} - ${Math.round(record.accuracy * 100)}% - ${escapeHtml(record.passageTitle || "Race")}</small></div>`).join("") : `<p class="leaderboard-empty">No races yet.</p>`;
+}
+
 function showSeriesResult(recordId) {
   const result = data.records.find((record) => record.id === recordId);
   if (!result) return;
@@ -872,6 +943,7 @@ function saveDashboardProfile(event) {
   if (!name) return;
   const previousName = data.profile.name;
   if (previousName && profileKey(previousName) !== profileKey(name)) saveActiveProfileLibrary(previousName);
+  if (previousName) saveActivePlayerProfile(previousName);
   data.profile.name = name;
   if (data.profile.calibration) data.profile.calibration.playerName = name;
   loadActiveProfileLibrary(name);
@@ -880,6 +952,16 @@ function saveDashboardProfile(event) {
   showDashboard();
   toast(`Player saved: ${name}`);
 }
+
+function loadDashboardProfile() {
+  const name = $("#dashboardPlayerName").value.trim();
+  if (!name) return;
+  if (!loadPlayerProfile(name)) { toast(`No saved profile named ${name}.`); return; }
+  persist();
+  showDashboard();
+  toast(`Loaded ${name}'s profile.`);
+}
+
 function showLastResults({ historyMode = "push" } = {}) {
   showFinishScreen({ historyMode });
 }
@@ -1134,8 +1216,9 @@ function bindEvents() {
     if (action === "retest") startCalibration();
     if (action === "start-race") startChampionship();
     if (action === "return-to-races") returnToRaces();
-    if (action === "open-runners") $("#runnerDialog").showModal();
+    if (action === "open-runners") { previewCharacterId = data.profile.characterId; renderCharacters(); $("#runnerDialog").showModal(); }
     if (action === "close-runners") $("#runnerDialog").close();
+    if (action === "accept-runner") { data.profile.characterId = previewCharacterId; persist(); renderCharacters(); $("#runnerDialog").close(); toast(`Runner selected: ${manifest.characters.find((item) => item.id === previewCharacterId)?.displayName || previewCharacterId}.`); }
     if (action === "pause") pauseRace();
     if (action === "resume") resumeRace();
     if (action === "restart-race") startRace();
@@ -1146,6 +1229,9 @@ function bindEvents() {
     if (action === "view-podium") renderPodium();
     if (action === "last-results") showLastResults();
     if (action === "return-from-results") returnFromResults();
+    if (action === "load-profile") loadDashboardProfile();
+    if (action === "open-leaderboard") { renderLeaderboard(); $("#leaderboardDialog").showModal(); }
+    if (action === "close-leaderboard") $("#leaderboardDialog").close();
     if (action === "open-mistakes") { renderMistakeStats(mistakeReviewResult || lastRaceResult, mistakeScope); $("#mistakeDialog").showModal(); }
     if (action === "close-mistakes") $("#mistakeDialog").close();
     if (action === "continue-championship") continueChampionship();
@@ -1157,7 +1243,7 @@ function bindEvents() {
     if (action === "close-preview") $("#previewDialog").close();
     const level = Number(event.target.closest("[data-level]")?.dataset.level); if (level) selectChampionshipLevel(level);
     const seriesResult = event.target.closest("[data-series-result]")?.dataset.seriesResult; if (seriesResult) showSeriesResult(seriesResult);
-    const character = event.target.closest("[data-character]")?.dataset.character; if (character) { data.profile.characterId = character; persist(); renderCharacters(); if ($("#runnerDialog").open) $("#runnerDialog").close(); toast(`Runner selected: ${manifest.characters.find((item) => item.id === character)?.displayName || character}.`); }
+    const character = event.target.closest("[data-character]")?.dataset.character; if (character) { previewCharacterId = character; renderCharacters(); }
     const passageOrder = event.target.closest("[data-passage-order]")?.dataset.passageOrder; if (passageOrder) selectPassageOrder(passageOrder);
     const toggleSection = event.target.closest("[data-toggle-section]")?.dataset.toggleSection; if (toggleSection) togglePassageSection(toggleSection);
     const edit = event.target.closest("[data-edit-passage]")?.dataset.editPassage; if (edit && !event.target.closest("button")) editPassage(edit);
