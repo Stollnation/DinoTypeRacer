@@ -10,6 +10,7 @@ import { keyLabel, summarizeMistakes } from "./mistakes.js";
 import { resultQuip } from "./quips.js";
 import { adjustedAiBaseline, aiPaceLabel, clampAiPace, projectedAiRange } from "./difficulty.js";
 import { focusKeysForRace, normalizedFocusKey } from "./focus-keys.js";
+import { fetchOnlineLeaderboard, submitOnlineLeaderboard } from "./online-leaderboard.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -39,6 +40,8 @@ let racePausedAt = null;
 let raceFrame = null;
 let raceActive = false;
 let lastRaceResult = data.records[0] || null;
+let onlineLeaderboardRows = null;
+let onlineLeaderboardError = "";
 let historicalReturnScreen = null;
 let mistakeReviewResult = null;
 let mistakeScope = "race";
@@ -815,6 +818,7 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   data.records.unshift(result); data.records = data.records.slice(0, 5000);
   if (!data.bestReplay || time < data.bestReplay.time) data.bestReplay = { playerName: result.playerName, time, wpm: result.wpm, passageId: raceSetup.passage.id, samples: raceSession.samples.map((sample) => ({ t: sample.t, p: sample.p })) };
   persist(); lastRaceResult = result;
+  void syncLeaderboardResult(result);
   selectedReviewResult = reviewingCompletedLevel ? result : selectedReviewResult;
   replayingCompletedRace = null;
   renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
@@ -889,10 +893,52 @@ function leaderboardRows() {
     .map((record, index) => ({ ...record, rank: index + 1 }));
 }
 
-function renderLeaderboard() {
-  const rows = leaderboardRows();
-  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} local race entr${rows.length === 1 ? "y" : "ies"} saved in this browser. Showing the top 100.` : "Finish a race to add the first leaderboard entry.";
+function combineLeaderboardRows(localRows, onlineRows = []) {
+  const records = new Map();
+  [...onlineRows, ...localRows].forEach((record) => {
+    if (!Number.isFinite(record.wpm) || !Number.isFinite(record.accuracy)) return;
+    records.set(record.id || `${record.playerName}-${record.date}-${record.wpm}`, record);
+  });
+  return [...records.values()]
+    .sort((a, b) => b.wpm - a.wpm || b.accuracy - a.accuracy || a.time - b.time)
+    .map((record, index) => ({ ...record, rank: index + 1 }));
+}
+
+async function syncLeaderboardResult(result) {
+  try {
+    onlineLeaderboardRows = await submitOnlineLeaderboard(result);
+    onlineLeaderboardError = "";
+  } catch (error) {
+    onlineLeaderboardError = "Online leaderboard is unavailable right now, so this score is saved locally.";
+    console.warn(error);
+  }
+}
+
+async function refreshOnlineLeaderboard() {
+  try {
+    onlineLeaderboardRows = await fetchOnlineLeaderboard();
+    onlineLeaderboardError = "";
+  } catch (error) {
+    onlineLeaderboardError = "Online leaderboard is unavailable right now. Showing saved local scores.";
+    console.warn(error);
+  }
+}
+
+function renderLeaderboardRows(rows) {
   $("#leaderboardTable").innerHTML = rows.length ? rows.slice(0, 100).map((record) => `<div class="${record.playerName === data.profile.name ? "is-player" : ""}"><span>${record.rank}</span><strong>${escapeHtml(record.playerName || "Racer")}</strong><b>${Math.round(record.wpm)} WPM</b><small>Level ${record.level || 1} - Race ${record.roundNumber || 1} - ${Math.round(record.accuracy * 100)}% - ${escapeHtml(record.passageTitle || "Race")}</small></div>`).join("") : `<p class="leaderboard-empty">No races yet.</p>`;
+}
+
+async function renderLeaderboard() {
+  const localRows = leaderboardRows();
+  let rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
+  const localCount = localRows.length;
+  const onlineCount = onlineLeaderboardRows?.length || 0;
+  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown (${onlineCount} online, ${localCount} local). Loading latest online scores...` : "Finish a race to add the first leaderboard entry. Loading online scores...";
+  renderLeaderboardRows(rows);
+  await refreshOnlineLeaderboard();
+  rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
+  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown (${onlineLeaderboardRows?.length || 0} online, ${localCount} local).${onlineLeaderboardError ? ` ${onlineLeaderboardError}` : ""}` : `No leaderboard entries yet.${onlineLeaderboardError ? ` ${onlineLeaderboardError}` : ""}`;
+  renderLeaderboardRows(rows);
 }
 
 function showSeriesResult(recordId) {
@@ -1230,7 +1276,7 @@ function bindEvents() {
     if (action === "last-results") showLastResults();
     if (action === "return-from-results") returnFromResults();
     if (action === "load-profile") loadDashboardProfile();
-    if (action === "open-leaderboard") { renderLeaderboard(); $("#leaderboardDialog").showModal(); }
+    if (action === "open-leaderboard") { void renderLeaderboard(); $("#leaderboardDialog").showModal(); }
     if (action === "close-leaderboard") $("#leaderboardDialog").close();
     if (action === "open-mistakes") { renderMistakeStats(mistakeReviewResult || lastRaceResult, mistakeScope); $("#mistakeDialog").showModal(); }
     if (action === "close-mistakes") $("#mistakeDialog").close();
