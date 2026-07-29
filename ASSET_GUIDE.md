@@ -68,7 +68,7 @@ Camera centers are Photoshop/source coordinates, with positive Y moving down fro
 
 ## Shared stage alignment contract
 
-Prehistoric Winter, Prehistoric Wilds, and Prehistoric Canyon are registered as one panning-track family. Their backgrounds share the same image size, viewport, and camera rules. The race surface may either match the shared Winter/Wilds lane template or provide its own exact `lanePaths` when the painted track grid is different.
+Prehistoric Winter, Prehistoric Wilds, and Prehistoric Canyon are registered as one panning-track family. Their backgrounds share the same image size, viewport, camera rules, and current lane grid. Use a custom `lanePaths` grid only when a new painted road is intentionally different.
 
 Use these exact source-art values for panning stages:
 
@@ -76,9 +76,9 @@ Use these exact source-art values for panning stages:
 - Visible camera/viewport: `1530 x 724`.
 - World size: `2172 x 724`.
 - Camera centers: start at `{ "x": 762, "y": 362 }`, end at `{ "x": 1408, "y": 362 }`.
-- Race line: match the player lane start and finish. Winter/Wilds use `{ "startX": 114, "finishX": 1977 }`; Canyon uses `{ "startX": 125, "finishX": 1897 }`.
-- Lane baselines, in manifest lane order: use the center point of each runner image for that track. Winter/Wilds use `443.25, 415.5, 387.75, 360, 471`; Canyon uses `484, 461, 438, 415, 507`.
-- Winter/Wilds lane paths:
+- Race line: match the player lane start and finish. Current panning stages use `{ "startX": 114, "finishX": 1977 }`.
+- Lane baselines, in manifest lane order: use the center point of each runner image. Current panning stages use `443.25, 415.5, 387.75, 360, 471`.
+- Current panning-stage lane paths:
   - Lane 0: start `{ "x": 136.75, "y": 443.25 }`, finish `{ "x": 1957.75, "y": 443.25 }`
   - Lane 1: start `{ "x": 159.5, "y": 415.5 }`, finish `{ "x": 1938.5, "y": 415.5 }`
   - Lane 2: start `{ "x": 182.25, "y": 387.75 }`, finish `{ "x": 1919.25, "y": 387.75 }`

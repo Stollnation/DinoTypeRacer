@@ -28,7 +28,7 @@ Every stage needs five `lanePaths` entries:
 4. Bot 4, top/back lane
 5. Player, bottom/front lane
 
-The player lane should be the largest/front-most lane and is drawn last. Do not assume a new background can reuse another stage's lane Y values. Match the painted track lanes in that exact image.
+The player lane should be the largest/front-most lane and is drawn last. The current prehistoric panning stages share one lane grid; only create a stage-specific grid when the painted road is intentionally different.
 
 ## Start and finish rule
 
@@ -39,7 +39,7 @@ The player lane should be the largest/front-most lane and is drawn last. Do not 
 
 ## Current aligned stages
 
-`Prehistoric Winter` and `Prehistoric Wilds` share this lane grid:
+`Prehistoric Winter`, `Prehistoric Wilds`, and `Prehistoric Canyon` share this lane grid:
 
 ```text
 Bot 1: start 136.75,443.25 -> finish 1957.75,443.25
