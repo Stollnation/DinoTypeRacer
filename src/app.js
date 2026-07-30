@@ -308,7 +308,7 @@ function startCalibration() {
   $("#calibrationTimer").textContent = CONFIG.calibrationSeconds;
   $("#calibrationWpm").textContent = "0";
   $("#manualPaceWpm").value = Math.round(data.profile.calibration?.wpm || 40);
-  $("#calibrationHint").textContent = `${calibrationMode === "flow" ? "Mistakes are counted but do not stop you" : "Mistakes must be corrected"} Â· Starts on your first keystroke`;
+  $("#calibrationHint").textContent = `${calibrationMode === "flow" ? "Mistakes are counted but do not stop you" : "Mistakes must be corrected"} - Starts on your first keystroke`;
   renderTyping($("#calibrationTyping"), calibrationSession);
   showScreen("calibration");
   $("#calibrationTyping").focus();
@@ -408,7 +408,7 @@ function selectCalibrationMode(mode) {
   });
   calibrationSession = new TypingSession(CONFIG.calibrationText, { ignoreMistakes: mode === "flow" });
   renderTyping($("#calibrationTyping"), calibrationSession);
-  $("#calibrationHint").textContent = `${mode === "flow" ? "Mistakes are counted but do not stop you" : "Mistakes must be corrected"} Â· Starts on your first keystroke`;
+  $("#calibrationHint").textContent = `${mode === "flow" ? "Mistakes are counted but do not stop you" : "Mistakes must be corrected"} - Starts on your first keystroke`;
   $("#calibrationTyping").focus();
 }
 
@@ -714,7 +714,7 @@ function startRace({ roundNumberOverride = null } = {}) {
   raceRacers = createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId: data.profile.characterId });
   racePlayer = { id: "player", name: championship.playerName || data.profile.name, characterId: data.profile.characterId, progress: 0, finishTime: null };
   const modeName = mode === "adaptive" ? "Adaptive" : mode === "ghost" ? "Personal Best" : `${difficulty[0].toUpperCase() + difficulty.slice(1)} Fixed`;
-  $("#raceModeLabel").textContent = `Level ${championship.level} Â· Race ${roundNumber} of ${CHAMPIONSHIP_RACES} Â· ${modeName} Â· ${track.displayName}`;
+  $("#raceModeLabel").textContent = `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
   $("#raceTitle").textContent = passage.source ? `${passage.title} - ${passage.source}` : passage.title;
   $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = "100%"; $("#raceProgress").textContent = "0";
   $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${raceTypingInstruction()}` : "The race starts after the countdown";
@@ -827,7 +827,7 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   $("#finishOverlay").classList.toggle("is-perfect", result.perfect);
   $("#perfectCelebration").classList.toggle("hidden", !result.perfect);
   $("#finishOverlay").classList.remove("hidden");
-  $("#raceHint").textContent = `Finished ${ordinal(result.place)} â€” race results in 4 seconds`;
+  $("#raceHint").textContent = `Finished ${ordinal(result.place)} - race results in 4 seconds`;
   raceFinishTimer = setTimeout(() => {
     $("#finishOverlay").classList.add("hidden");
   $("#finishOverlay").classList.remove("is-perfect");
@@ -965,7 +965,7 @@ function mistakeContext(mistake, result) {
   const text = passage?.text || raceSetup?.passage?.text || "";
   const start = Math.max(0, mistake.index - 18);
   const end = Math.min(text.length, mistake.index + 19);
-  return `${start ? "â€¦" : ""}${text.slice(start, mistake.index)}[${mistake.expected}]${text.slice(mistake.index + 1, end)}${end < text.length ? "â€¦" : ""}`;
+  return `${start ? "..." : ""}${text.slice(start, mistake.index)}[${mistake.expected}]${text.slice(mistake.index + 1, end)}${end < text.length ? "..." : ""}`;
 }
 
 function renderMistakeStats(result, scope = "race") {
@@ -975,12 +975,12 @@ function renderMistakeStats(result, scope = "race") {
   const summary = summarizeMistakes(mistakes);
   const rangeLabel = scope === "series" ? "five-race series" : "race";
   $("#mistakeStatsButton").textContent = (result.mistakes || []).length ? `Mistake Stats (${result.mistakes.length})` : "Mistake Stats (Perfect)";
-  $("#mistakeSummary").textContent = mistakes.length ? `${playerName} made ${mistakes.length} incorrect keypress${mistakes.length === 1 ? "" : "es"} in this ${rangeLabel}.` : `${playerName} had a perfect ${rangeLabel} â€” every keypress matched.`;
+  $("#mistakeSummary").textContent = mistakes.length ? `${playerName} made ${mistakes.length} incorrect keypress${mistakes.length === 1 ? "" : "es"} in this ${rangeLabel}.` : `${playerName} had a perfect ${rangeLabel} - every keypress matched.`;
   $$('[data-mistake-scope]').forEach((button) => button.classList.toggle("selected", button.dataset.mistakeScope === scope));
   const maxCount = summary.expected[0]?.count || 1;
   $("#mistakeChart").innerHTML = summary.expected.length ? summary.expected.slice(0, 8).map((item) => `<div class="mistake-bar"><span class="key-cap">${escapeHtml(item.label)}</span><div><i style="width:${Math.max(8, (item.count / maxCount) * 100)}%"></i></div><strong>${item.count}</strong></div>`).join("") : `<p class="mistake-empty">No missed keys to chart.</p>`;
-  $("#mistakeConfusions").innerHTML = summary.confusions.length ? summary.confusions.slice(0, 10).map((item) => `<div><span>Expected <kbd>${escapeHtml(item.expected)}</kbd></span><span>Pressed <kbd>${escapeHtml(item.typed)}</kbd></span><strong>Ã—${item.count}</strong></div>`).join("") : `<p class="mistake-empty">No key confusions in this ${rangeLabel}.</p>`;
-  $("#mistakeContexts").innerHTML = mistakes.length ? mistakes.slice(0, 20).map((mistake) => `<div><code>${escapeHtml(mistakeContext(mistake, result))}</code><span>Race ${mistake.roundNumber || result.roundNumber || 1} Â· ${escapeHtml(mistake.passageTitle || result.passageTitle || "Passage")} Â· pressed <kbd>${escapeHtml(keyLabel(mistake.typed))}</kbd> at ${mistake.time.toFixed(1)}s</span></div>`).join("") + (mistakes.length > 20 ? `<small>Showing the first 20 of ${mistakes.length} mistakes.</small>` : "") : `<p class="mistake-empty">Nothing to review â€” excellent accuracy.</p>`;
+  $("#mistakeConfusions").innerHTML = summary.confusions.length ? summary.confusions.slice(0, 10).map((item) => `<div><span>Expected <kbd>${escapeHtml(item.expected)}</kbd></span><span>Pressed <kbd>${escapeHtml(item.typed)}</kbd></span><strong>x${item.count}</strong></div>`).join("") : `<p class="mistake-empty">No key confusions in this ${rangeLabel}.</p>`;
+  $("#mistakeContexts").innerHTML = mistakes.length ? mistakes.slice(0, 20).map((mistake) => `<div><code>${escapeHtml(mistakeContext(mistake, result))}</code><span>Race ${mistake.roundNumber || result.roundNumber || 1} - ${escapeHtml(mistake.passageTitle || result.passageTitle || "Passage")} - pressed <kbd>${escapeHtml(keyLabel(mistake.typed))}</kbd> at ${mistake.time.toFixed(1)}s</span></div>`).join("") + (mistakes.length > 20 ? `<small>Showing the first 20 of ${mistakes.length} mistakes.</small>` : "") : `<p class="mistake-empty">Nothing to review - excellent accuracy.</p>`;
 }
 
 function saveDashboardProfile(event) {
@@ -1168,7 +1168,7 @@ function renderPassageList() {
   $("#passageList").innerHTML = order.map((category) => {
     const items = groups.get(category);
     const collapsed = data.collapsedPassageSections[category] === true;
-    return `<section class="passage-section ${collapsed ? "collapsed" : ""}"><button class="passage-section-title" data-toggle-section="${escapeHtml(category)}" aria-expanded="${!collapsed}"><span class="section-caret">&gt;</span><span>${escapeHtml(category)}</span><span class="passage-section-count">${items.length}</span></button><div class="passage-section-items">${items.map((item) => `<div class="passage-row ${editorPassageId === item.id ? "selected" : ""}" data-edit-passage="${escapeHtml(item.id)}"><strong>${escapeHtml(item.title)}</strong><small>${item.source ? `${escapeHtml(item.source)} · ` : ""}${item.text.length} chars · ${item.enabled ? "Enabled" : "Disabled"}</small><div class="row-actions"><button class="mini-button" data-use-passage="${escapeHtml(item.id)}">Use</button><button class="mini-button" data-duplicate-passage="${escapeHtml(item.id)}">Copy</button></div></div>`).join("")}</div></section>`;
+    return `<section class="passage-section ${collapsed ? "collapsed" : ""}"><button class="passage-section-title" data-toggle-section="${escapeHtml(category)}" aria-expanded="${!collapsed}"><span class="section-caret">&gt;</span><span>${escapeHtml(category)}</span><span class="passage-section-count">${items.length}</span></button><div class="passage-section-items">${items.map((item) => `<div class="passage-row ${editorPassageId === item.id ? "selected" : ""}" data-edit-passage="${escapeHtml(item.id)}"><strong>${escapeHtml(item.title)}</strong><small>${item.source ? `${escapeHtml(item.source)} - ` : ""}${item.text.length} chars - ${item.enabled ? "Enabled" : "Disabled"}</small><div class="row-actions"><button class="mini-button" data-use-passage="${escapeHtml(item.id)}">Use</button><button class="mini-button" data-duplicate-passage="${escapeHtml(item.id)}">Copy</button></div></div>`).join("")}</div></section>`;
   }).join("");
 }
 
