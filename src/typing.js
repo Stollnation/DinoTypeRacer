@@ -51,8 +51,7 @@ export class TypingSession {
   }
 
   backspace() {
-    if (this.errorChar) { this.errorChar = ""; return; }
-    if (this.index > 0) this.index -= 1;
+    if (this.errorChar) this.errorChar = "";
   }
 
   sample(now = performance.now()) {
