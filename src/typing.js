@@ -46,7 +46,7 @@ export class TypingSession {
       typed,
       index: this.index,
       time: this.elapsed(now),
-      context: `${start ? "…" : ""}${this.text.slice(start, this.index)}[${this.text[this.index] || ""}]${this.text.slice(this.index + 1, end)}${end < this.text.length ? "…" : ""}`,
+      context: `${start ? "..." : ""}${this.text.slice(start, this.index)}[${this.text[this.index] || ""}]${this.text.slice(this.index + 1, end)}${end < this.text.length ? "..." : ""}`,
     });
   }
 

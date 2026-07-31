@@ -16,6 +16,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+const averageWpm = (records) => { const wpms = records.map((record) => Number(record.wpm)).filter(Number.isFinite); return wpms.length ? wpms.reduce((sum, wpm) => sum + wpm, 0) / wpms.length : 0; };
 const screens = Object.fromEntries($$(".screen").map((node) => [node.id.replace("Screen", ""), node]));
 
 let data = loadState();
@@ -720,6 +721,8 @@ function startRace({ roundNumberOverride = null } = {}) {
   $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${raceTypingInstruction()}` : "The race starts after the countdown";
   $("#raceLastResultsButton").classList.toggle("hidden", !lastRaceResult);
   renderTyping($("#raceTyping"), raceSession);
+  $("#raceTyping").classList.add("typing-locked");
+  $("#raceTyping").setAttribute("aria-disabled", "true");
   showScreen("race");
   raceActive = true; racePausedAt = null;
   raceCountdownEnd = performance.now() + 3000;
@@ -743,7 +746,7 @@ function updateRace(now) {
     renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: true });
     raceFrame = requestAnimationFrame(updateRace); return;
   }
-  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceHint").textContent = raceTypingInstruction(); audio.play("start"); $("#raceTyping").focus(); }
+  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceTyping").classList.remove("typing-locked"); $("#raceTyping").setAttribute("aria-disabled", "false"); $("#raceHint").textContent = raceTypingInstruction(); audio.play("start"); $("#raceTyping").focus(); }
   const elapsed = Math.max(0, (now - raceStartTime) / 1000);
   raceRacers.forEach((racer) => updateAi(racer, elapsed, raceSession.text.length));
   racePlayer.progress = raceSession.progress;
@@ -793,6 +796,8 @@ function debugFinishRaceFirst() {
   });
   $("#pauseOverlay").classList.add("hidden");
   $("#countdown").classList.add("hidden");
+  $("#raceTyping").classList.remove("typing-locked");
+  $("#raceTyping").setAttribute("aria-disabled", "false");
   finishRace(now, { forcePlayerFirst: true });
 }
 
@@ -841,6 +846,9 @@ function renderResults(result, { historical = false, levelReview = false } = {})
   const standings = championship?.rounds?.length ? championshipStandings(championship.rounds) : (result.seriesStandings || []);
   const playerName = result.playerName || data.profile.name || "Racer";
   const level = result.level || championship?.level || progressionState().level;
+  const championshipRecords = data.records.filter((record) => record.championshipId === result.championshipId);
+  const averageRecords = result.championshipId ? [...new Map([result, ...championshipRecords].map((record) => [record.id, record])).values()] : [result];
+  const raceAverageWpm = averageWpm(averageRecords);
   if (!historical) historicalReturnScreen = null;
   if (levelReview) { reviewingCompletedLevel = true; selectedReviewResult = result; }
   $("#resultRaceLabel").textContent = `Level ${level} - Race ${roundNumber} of ${totalRaces} complete`;
@@ -855,7 +863,6 @@ function renderResults(result, { historical = false, levelReview = false } = {})
   $("#nextRaceName").textContent = seriesComplete ? (finalLevel ? "All levels are ready to review" : `Level ${level + 1} is unlocked`) : `Race ${roundNumber + 1} of 5 - ${nextPassage?.title || "Next passage"}`;
   $("#nextRaceCallout span").textContent = seriesComplete ? "Level complete" : "Up next";
   $("#nextRaceCallout").classList.toggle("podium-next", seriesComplete);
-  const championshipRecords = data.records.filter((record) => record.championshipId === result.championshipId);
   $("#seriesRaceNav").innerHTML = Array.from({ length: totalRaces }, (_, index) => {
     const raceNumber = index + 1;
     const saved = championshipRecords.find((record) => record.roundNumber === raceNumber);
@@ -864,7 +871,7 @@ function renderResults(result, { historical = false, levelReview = false } = {})
   $("#seriesStandings").innerHTML = standings.length ? standings.map((racer, index) => `<div class="${racer.id === "player" ? "is-player" : ""}"><span>${index + 1}</span><strong>${escapeHtml(racer.name)}</strong><small>${racer.points}</small></div>`).join("") : "";
   $("#nextRaceButton").textContent = seriesComplete ? (finalLevel ? "Return to Levels" : `Go to Level ${level + 1}`) : `Start Race ${roundNumber + 1}`;
   $("#resultTime").textContent = formatTime(result.time);
-  $("#resultWpm").textContent = Math.round(result.wpm); $("#resultPeak").textContent = Math.round(result.peakWpm); $("#resultAccuracy").textContent = `${Math.round(result.accuracy * 100)}%`; $("#resultErrors").textContent = result.errors;
+  $("#resultWpm").textContent = Math.round(result.wpm); $("#resultAverageWpm").textContent = Math.round(raceAverageWpm); $("#resultPeak").textContent = Math.round(result.peakWpm); $("#resultAccuracy").textContent = `${Math.round(result.accuracy * 100)}%`; $("#resultErrors").textContent = result.errors;
   $("#returnFromResultsButton").classList.toggle("hidden", !historical);
   $("#returnFromResultsButton").textContent = historicalReturnScreen === "race" ? "Return to current race" : historicalReturnScreen === "results" ? "Return to latest result" : "Return to Races";
   const replay = replayUsage(level);
