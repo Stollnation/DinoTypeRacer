@@ -1,4 +1,4 @@
-import { CONFIG, THEMES, STARTER_PASSAGES } from "./config.js";
+import { CONFIG, THEMES, STARTER_PASSAGES, MOVIE_QUOTE_SOURCE_BY_ID } from "./config.js";
 import { loadState, saveState } from "./storage.js";
 import { choosePassage, exportPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
@@ -18,8 +18,6 @@ const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&"
 const formatTime = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 const averageWpm = (records) => { const wpms = records.map((record) => Number(record.wpm)).filter(Number.isFinite); return wpms.length ? wpms.reduce((sum, wpm) => sum + wpm, 0) / wpms.length : 0; };
 const screens = Object.fromEntries($$(".screen").map((node) => [node.id.replace("Screen", ""), node]));
-const LAYOUT_BASE_WIDTH = 1280;
-const LAYOUT_BASE_HEIGHT = 820;
 
 let data = loadState();
 let manifest;
@@ -68,20 +66,10 @@ async function init() {
   $$('[data-game-title]').forEach((node) => node.textContent = CONFIG.title);
   renderThemeOptions();
   applySettings();
-  updateViewportScale();
   bindEvents();
   renderCharacters();
   renderPassageList();
   if (data.profile.calibration) showDashboard({ historyMode: "replace" }); else showScreen("welcome", { historyMode: "replace" });
-}
-
-function updateViewportScale() {
-  const widthScale = window.innerWidth / LAYOUT_BASE_WIDTH;
-  const heightScale = window.innerHeight / LAYOUT_BASE_HEIGHT;
-  const scale = Math.max(0.5, Math.min(1, widthScale, heightScale));
-  const shellWidth = scale < 1 ? Math.ceil(window.innerWidth / scale) : Math.min(window.innerWidth - 48, 1500);
-  document.documentElement.style.setProperty("--ui-scale", scale.toFixed(4));
-  document.documentElement.style.setProperty("--shell-width", `${Math.max(1040, shellWidth)}px`);
 }
 async function installBundledPassages() {
   if ((data.libraryVersion || 0) >= 5) { normalizeBuiltInPassageData(); loadActiveProfileLibrary(); return; }
@@ -115,7 +103,14 @@ function normalizeBuiltInPassageData() {
       passage.title = passage.title.replace("Movie-Style Challenge", "Movie Quote");
       passage.source ||= "Original Movie Quote";
     }
-    if (passage.category === "Movie Quotes") passage.source ||= "Original Movie Quote";
+    if (passage.category === "Movie Quotes") {
+      const canonicalSource = MOVIE_QUOTE_SOURCE_BY_ID[passage.id];
+      if (canonicalSource) {
+        passage.source = canonicalSource;
+      } else if (!passage.source || /^Original .*Film$/i.test(passage.source) || /^Original Movie Quote$/i.test(passage.source)) {
+        passage.source = "Original Movie Quote";
+      }
+    }
     return passage;
   };
   const dedupe = (items) => {
@@ -1459,8 +1454,6 @@ function bindEvents() {
   $("#passageText").addEventListener("input", () => $("#passageLength").textContent = `${normalizeText($("#passageText").value).length} characters`);
   $("#importFile").addEventListener("change", async (event) => { const file = event.target.files[0]; if (!file) return; try { const incoming = importPassages(await file.text()); const map = new Map(data.passages.map((item) => [item.id, item])); incoming.forEach((item) => map.set(item.id, item)); data.passages = [...map.values()]; selectedPassageCategory = incoming[0].category || selectedPassageCategory; selectedPassageId = incoming[0].id; persist(); renderPassageGroupControl(); editPassage(incoming[0].id); toast(`Imported ${incoming.length} passage${incoming.length === 1 ? "" : "s"} into ${selectedPassageCategory}.`); } catch (error) { toast(error.message); } event.target.value = ""; });
   document.addEventListener("keydown", handleTypingKey);
-  window.addEventListener("resize", updateViewportScale);
-  window.addEventListener("orientationchange", updateViewportScale);
   window.addEventListener("blur", () => { if (raceActive && racePausedAt === null) pauseRace(true); });
   window.addEventListener("popstate", (event) => restoreScreenFromHistory(event.state?.screen || screenFromHash() || (data.profile.calibration ? "dashboard" : "welcome")));
   document.addEventListener("click", (event) => {

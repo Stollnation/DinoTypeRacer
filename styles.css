@@ -1,7 +1,5 @@
 :root {
   color-scheme: light;
-  --ui-scale: 1;
-  --shell-width: 1500px;
   --ink: #17344f;
   --ink-soft: #526b61;
   --cream: #f4ebdd;
@@ -16,21 +14,12 @@
 }
 
 * { box-sizing: border-box; }
-html { min-width: 0; background: var(--cream); }
-body { margin: 0; min-height: 100vh; overflow: hidden; color: var(--ink); background: radial-gradient(circle at 4% 6%, rgba(60,127,166,.18), transparent 28rem), radial-gradient(circle at 96% 18%, rgba(79,122,69,.17), transparent 30rem), var(--cream); }
+html { min-width: 1180px; background: var(--cream); }
+body { margin: 0; min-height: 100vh; overflow-y: auto; overflow-x: auto; color: var(--ink); background: radial-gradient(circle at 4% 6%, rgba(60,127,166,.18), transparent 28rem), radial-gradient(circle at 96% 18%, rgba(79,122,69,.17), transparent 30rem), var(--cream); }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
-.app-shell {
-  width: var(--shell-width);
-  min-height: calc(100dvh / var(--ui-scale));
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  transform: scale(var(--ui-scale));
-  transform-origin: top center;
-  will-change: transform;
-}
+.app-shell { width: min(1500px, calc(100% - 48px)); min-height: 100vh; margin: 0 auto; display: flex; flex-direction: column; }
 .topbar { height: 88px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
 .wordmark { display: flex; align-items: center; gap: 12px; border: 0; background: transparent; text-align: left; padding: 0; }
 .wordmark-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 13px; background: var(--ink); color: #fff; font-weight: 900; letter-spacing: -.08em; box-shadow: 5px 5px 0 var(--coral); }
@@ -307,7 +296,8 @@ body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::aft
    The HUD overlays the native 1823:863 track, leaving vertical space for the
    typing panel even in Chrome's 850-930px-tall usable area on a 1080p display. */
 body[data-screen="race"] {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 body[data-screen="race"] .topbar,
 body[data-screen="race"] footer {
@@ -322,9 +312,8 @@ body[data-screen="race"] main {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) var(--race-typing-height);
   gap: 8px;
-  height: 100dvh;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 8px 0 10px;
 }
 .race-screen.active .race-topline,
@@ -424,7 +413,7 @@ body[data-screen="race"] main {
   }
 }
 /* Viewport-fitted Ready / Race Control screen */
-body[data-screen="dashboard"] { overflow: hidden; }
+body[data-screen="dashboard"] { overflow-y: auto; overflow-x: hidden; }
 body[data-screen="dashboard"] .topbar { height: clamp(54px, 6.5dvh, 68px); flex: 0 0 auto; }
 body[data-screen="dashboard"] footer { display: none; }
 body[data-screen="dashboard"] main { min-height: 0; }
@@ -432,12 +421,18 @@ body[data-screen="dashboard"] main { min-height: 0; }
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: clamp(8px, 1dvh, 12px);
-  height: 100%;
   min-height: 0;
-  padding: clamp(8px, 1dvh, 12px) 0;
-  overflow: hidden;
+  padding: clamp(3px, .5dvh, 8px) 0;
+  overflow: visible;
 }
-.dashboard-screen.active .dashboard-head { align-items: center; margin: 0; }
+.dashboard-screen.active .dashboard-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+  margin: 0 0 6px;
+}
+.dashboard-screen.active .dashboard-head > div { max-width: 760px; }
 .dashboard-screen.active .dashboard-head .eyebrow { margin-bottom: 3px; font-size: .62rem; }
 .dashboard-screen.active .dashboard-head h2 { margin-bottom: 2px; font-size: clamp(2rem, 4.4dvh, 3rem); }
 .dashboard-screen.active .dashboard-head > div > p:not(.eyebrow) { margin-bottom: 4px; font-size: .82rem; }
@@ -445,20 +440,53 @@ body[data-screen="dashboard"] main { min-height: 0; }
 .dashboard-screen.active .ready-profile label { grid-template-columns: auto minmax(170px, 260px); align-items: center; gap: 8px; }
 .dashboard-screen.active .ready-profile input { min-height: 34px; }
 .dashboard-screen.active .ready-profile .compact { min-height: 34px; }
-.dashboard-screen.active .baseline-card { min-width: 230px; padding: 10px 16px; border-radius: 15px; }
+.dashboard-screen.active .baseline-card {
+  justify-self: end;
+  min-width: 210px;
+  padding: 10px 16px;
+  border-radius: 15px;
+}
 .dashboard-screen.active .baseline-card strong { margin: 2px 0; font-size: 1.2rem; }
 .dashboard-screen.active .baseline-card .inline-button { margin-top: 4px; }
+.dashboard-screen.active .baseline-card span,
+.dashboard-screen.active .baseline-card strong,
+.dashboard-screen.active .baseline-card small,
+.dashboard-screen.active .baseline-card .inline-button {
+  text-align: center;
+}
+.dashboard-screen.active .baseline-card .inline-button + .inline-button { margin-left: 12px; }
 .dashboard-screen.active .setup-grid { min-height: 0; gap: 12px; }
 .dashboard-screen.active .setup-panel { min-height: 0; padding: clamp(11px, 1.25dvh, 16px); border-radius: 18px; }
+.dashboard-screen.active .setup-panel:first-child {
+  justify-items: start;
+  align-items: start;
+  text-align: left;
+}
 .dashboard-screen.active .panel-title { margin-bottom: 8px; }
 .dashboard-screen.active .panel-title > span { width: 28px; height: 28px; }
 .dashboard-screen.active .panel-title h3 { font-size: 1rem; }
 .dashboard-screen.active .panel-title p { font-size: .7rem; }
-.dashboard-screen.active .ai-pace-control { padding: clamp(9px, 1.1dvh, 13px); }
+.dashboard-screen.active .ai-pace-control {
+  width: min(100%, 760px);
+  justify-self: center;
+  padding: clamp(9px, 1.1dvh, 13px);
+}
+.dashboard-screen.active .ai-pace-readout,
+.dashboard-screen.active .ai-pace-scale,
+.dashboard-screen.active .ai-pace-range,
+.dashboard-screen.active .ai-pace-note,
+.dashboard-screen.active .race-modes,
+.dashboard-screen.active .helper-toggle {
+  justify-content: center;
+  text-align: center;
+}
+.dashboard-screen.active .ai-pace-readout { align-items: center; }
+.dashboard-screen.active .ai-pace-readout > div { text-align: center; }
 .dashboard-screen.active .ai-pace-readout strong { font-size: 1.05rem; }
 .dashboard-screen.active .ai-pace-readout output { min-width: 62px; padding: 5px 9px; font-size: 1rem; }
 .dashboard-screen.active .ai-pace-control input[type="range"] { margin: clamp(13px, 1.7dvh, 19px) 0 7px; }
 .dashboard-screen.active .ai-pace-range { margin: 9px 0 2px; }
+.dashboard-screen.active .ai-pace-note { display: block; margin: 0 auto; max-width: 58ch; }
 .dashboard-screen.active .runner-summary { min-height: 168px; padding: 8px 18px; }
 .dashboard-screen.active .runner-summary img { width: 164px; height: 164px; }
 .dashboard-screen.active .runner-summary strong { font-size: 1.45rem; }
@@ -477,6 +505,8 @@ body[data-screen="dashboard"] main { min-height: 0; }
 .dashboard-screen.active .launch-bar strong { margin: 1px 0; font-size: .9rem; }
 .dashboard-screen.active .launch-bar .primary.large,
 .dashboard-screen.active .launch-bar .secondary.large { min-width: 170px; min-height: 44px; font-size: .88rem; }
+.dashboard-screen.active .launch-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dashboard-screen.active .launch-actions .secondary.compact { min-height: 44px; padding: 0 14px; }
 @media (max-height: 760px) {
   .dashboard-screen.active .dashboard-head > div > p:not(.eyebrow),
   .dashboard-screen.active .panel-title p,

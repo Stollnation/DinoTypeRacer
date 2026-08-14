@@ -219,18 +219,20 @@ test("frequent wrong keys are bold for one recovery level while spaces remain st
   assert.deepEqual(focusKeysForRace([...levelTwoClean, ...levelOne], "Jon", "level-3"), []);
 });
 
-test("HD-to-4K layout uses fluid sizing and high-DPI canvas rendering", () => {
+test("HD-to-4K layout uses fluid sizing and browser scrolling", () => {
   const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
   const renderer = readFileSync(new URL("../src/renderer.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.match(renderer, /devicePixelRatio/);
   assert.match(renderer, /syncResolution\(track\)/);
+  assert.match(css, /html \{ min-width: 1180px;/);
+  assert.match(css, /body \{ margin: 0; min-height: 100vh; overflow-y: auto; overflow-x: auto;/);
   assert.match(css, /width: min\(2560px/);
   assert.match(css, /width: min\(100%, 140vh\)/);
   assert.match(css, /typing-char\.focus-key \{ color: inherit; background: transparent/);
   assert.match(css, /body\[data-screen="race"\] \.topbar/);
   assert.match(css, /grid-template-rows: minmax\(0, 1fr\) var\(--race-typing-height\)/);
-  assert.match(css, /body\[data-screen="dashboard"\] \{ overflow: hidden; \}/);
+  assert.match(css, /body\[data-screen="dashboard"\] \{ overflow-y: auto;\s+overflow-x: hidden; \}/);
   assert.match(css, /dashboard-screen\.active \.launch-bar/);
   assert.match(app, /focusKeys: activeFocusKeys\(\)/);
 });

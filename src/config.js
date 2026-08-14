@@ -185,6 +185,7 @@ const MOVIE_QUOTE_CHALLENGES = MOVIE_QUOTES.map(([text, source], index) => ({
   source,
   text,
 }));
+export const MOVIE_QUOTE_SOURCE_BY_ID = Object.fromEntries(MOVIE_QUOTE_CHALLENGES.map((item) => [item.id, item.source]));
 
 const BOOK_SOURCES = [
   "Inspired by Harry Potter and the Sorcerer's Stone", "Inspired by Treasure Island", "Inspired by Alice's Adventures in Wonderland", "Inspired by The Secret Garden", "Inspired by The Wonderful Wizard of Oz",
