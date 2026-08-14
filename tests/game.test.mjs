@@ -14,11 +14,11 @@ import { focusKeysForRace, mistypedKeyCounts, normalizedFocusKey } from "../src/
 import { publicLeaderboardRecord } from "../src/online-leaderboard.js";
 
 test("online leaderboard records only expose public race fields", () => { const record = publicLeaderboardRecord({ id: "race-1", playerName: "Ada", date: "2026-07-29T00:00:00.000Z", level: 2, roundNumber: 4, passageTitle: "Practice", wpm: 61.2, accuracy: 0.98, time: 42, place: 1, perfect: true, mistakes: [{ expected: "a", typed: "s" }], finishOrder: [{ name: "Bot" }] }); assert.deepEqual(Object.keys(record), ["id", "playerName", "date", "level", "roundNumber", "passageTitle", "wpm", "accuracy", "time", "place", "perfect"]); assert.equal(record.playerName, "Ada"); assert.equal(record.perfect, true); });
-test("typing uses training-style Backspace without rewinding correct progress", () => { const session = new TypingSession("abc"); session.type("a", 0); session.backspace(); assert.equal(session.index, 1); session.type("x", 1000); session.type("b", 2000); assert.equal(session.index, 1); assert.equal(session.errorChar, "b"); session.backspace(); assert.equal(session.errorChar, ""); session.backspace(); assert.equal(session.index, 1); session.type("b", 3000); assert.equal(session.index, 2); assert.equal(session.errors, 2); });
+test("typing uses Backspace without rewinding correct progress and ignores extra misses while locked", () => { const session = new TypingSession("abc"); session.type("a", 0); session.backspace(); assert.equal(session.index, 1); session.type("x", 1000); session.type("b", 2000); assert.equal(session.index, 1); assert.equal(session.errorChar, "x"); session.backspace(); assert.equal(session.errorChar, ""); session.backspace(); assert.equal(session.index, 1); session.type("b", 3000); assert.equal(session.index, 2); assert.equal(session.errors, 1); assert.equal(session.totalKeystrokes, 3); });
 test("typing records expected and pressed keys for mistake review", () => { const session = new TypingSession("a j"); session.type("a", 0); session.type("x", 100); session.backspace(); session.type(" ", 200); session.type(" ", 300); assert.deepEqual(session.mistakes.map(({ expected, typed, index }) => ({ expected, typed, index })), [{ expected: " ", typed: "x", index: 1 }, { expected: "j", typed: " ", index: 2 }]); const summary = summarizeMistakes(session.mistakes); assert.deepEqual(summary.expected, [{ label: "j", count: 1 }, { label: "Space", count: 1 }]); assert.equal(keyLabel(" "), "Space"); });
 test("mistake records preserve readable passage context", () => { const session = new TypingSession("hello world"); session.type("x", 1250); assert.equal(session.mistakes[0].context, "[h]ello world"); assert.equal(session.mistakes[0].time, 0); });
 test("race completion quips have broad deterministic variety", () => { assert.ok(WINNER_QUIPS.length >= 30); assert.equal(new Set(WINNER_QUIPS).size, WINNER_QUIPS.length); assert.ok(FINISH_QUIPS.length >= 10); const result = { id: "race-1", passageId: "verse-1", place: 1 }; assert.equal(resultQuip(result), resultQuip(result)); assert.ok(WINNER_QUIPS.includes(resultQuip(result))); });
-test("the typing layout and results controls expose stable wrapping and saved-player review", () => { const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8"); const html = readFileSync(new URL("../index.html", import.meta.url), "utf8"); const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8"); assert.match(app, /typing-word/); assert.match(css, /\.typing-word \{ display: inline-block; white-space: pre;/); assert.match(html, /dashboardPlayerName/); assert.match(html, /data-mistake-scope="series"/); assert.match(html, /data-action="last-results"/); assert.match(html, /resultAverageWpm/); assert.match(app, /averageWpm/); assert.match(app, /typing-locked/); assert.match(css, /typing-locked/); });
+test("the typing layout and results controls expose stable wrapping and saved-player review", () => { const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8"); const html = readFileSync(new URL("../index.html", import.meta.url), "utf8"); const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8"); assert.match(app, /typing-word/); assert.match(css, /\.typing-word \{ display: inline-block; white-space: pre;/); assert.match(html, /dashboardPlayerName/); assert.match(html, /data-mistake-scope="series"/); assert.match(html, /data-action="last-results"/); assert.match(html, /resultAverageWpm/); assert.match(app, /averageWpm/); assert.match(app, /typing-locked/); assert.match(app, /nextRaceButton.*\.focus/); assert.match(css, /typing-locked/); });
 test("screen navigation exposes home, finish, and browser history controls", () => {
   const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -51,7 +51,8 @@ test("starter library includes full General and movie-style challenge groups", (
   assert.match(beginner.at(-1).title, /Beginner Graduation/);
   assert.match(STARTER_PASSAGES.find((item) => item.id === "typing-intermediate-01").text, /Clean speed/);
   assert.match(STARTER_PASSAGES.find((item) => item.id === "typing-advanced-01").text, /Accuracy under pressure/);
-  assert.ok(STARTER_PASSAGES.every((item) => item.text.length >= 30));
+  assert.ok(STARTER_PASSAGES.filter((item) => item.category !== "Movie Quotes").every((item) => item.text.length >= 30));
+  assert.ok(STARTER_PASSAGES.filter((item) => item.category === "Movie Quotes").every((item) => item.text.length >= 5));
 });
 
 test("plain TXT import uses the first line as a section and each following line as a passage", () => {
@@ -150,7 +151,10 @@ test("race controls expose only difficulty and the scalable runner picker", () =
   assert.match(html, /data-action="return-to-races"/);
   assert.match(app, /data-action="open-runners"/);
   assert.match(html, /id="runnerDialog"/);
-  assert.doesNotMatch(html, /data-mode=/);
+  assert.match(html, /data-race-mode="strict"/);
+  assert.match(html, /data-race-mode="flow"/);
+  assert.match(html, /data-action="reset-all-races"/);
+  assert.match(html, /id="resetRacesDialog"/);
   assert.doesNotMatch(html, /id="difficultySelect"/);
   assert.doesNotMatch(html, /data-passage-order=/);
   assert.match(app, /adjustedAiBaseline/);
@@ -241,7 +245,7 @@ test("runner assets are ready for square 1024 frames without display stretching"
   assert.match(renderer, /canvas\.height \/ world\.viewportHeight/);
   assert.match(renderer, /character\.playerScale/);
   assert.match(renderer, /character\.raceScale/);
-  assert.match(renderer, /character\.footAnchorY \?\? frameHeight/);
+  assert.match(renderer, /character\.footAnchorY \?\? frameHeight/); assert.match(renderer, /keyHitRotation/); assert.match(renderer, /ctx\.rotate\(rotation\)/);
   assert.match(renderer, /track\.racerAnchor === "center"/);
   assert.match(renderer, /x - width \* 0\.5/);
   assert.match(renderer, /laneY - height \* 0\.5/);
@@ -313,6 +317,8 @@ test("Ready page exposes saved configuration-driven color schemes", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.equal(defaultState().settings.theme, "sunset-sprint");
+  assert.equal(CONFIG.calibrationTexts.length, 20);
+  assert.match(html, /data-action="open-leaderboard"/);
   assert.ok(THEMES.some((theme) => theme.id === "stormy-teal"));
   assert.match(html, /id="themeSelect"/);
   assert.match(css, /--graphite: #353535/);
@@ -359,6 +365,27 @@ test("manual starting pace can skip calibration and race retries consume visible
   assert.match(app, /used of \$\{replay\.allowed\}/);
   assert.match(css, /\.manual-pace-form/);
   assert.match(css, /\.replay-usage/);
+});
+
+test("starting pace uses 30 randomized paragraphs and strict mode locks extra mistakes", () => {
+  assert.equal(CONFIG.quickRaceParagraphs.length, 30);
+  const strict = new TypingSession("the");
+  strict.type("t", 0);
+  strict.type("x", 1000);
+  strict.type("y", 1500);
+  strict.type("z", 2000);
+  assert.equal(strict.index, 1);
+  assert.equal(strict.errors, 1);
+  assert.equal(strict.totalKeystrokes, 2);
+  assert.equal(strict.accuracy, 0.5);
+  strict.backspace();
+  strict.type("h", 2500);
+  strict.type("e", 3000);
+  assert.equal(strict.finished, true);
+  assert.equal(strict.errors, 1);
+  const flow = new TypingSession("abc", { ignoreMistakes: true });
+  flow.type("x", 0);
+  assert.ok(flow.missedIndices.has(0));
 });
 
 

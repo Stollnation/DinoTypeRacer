@@ -6,7 +6,7 @@ export function defaultState() {
     profile: { name: "", characterId: "nova", calibration: null },
     playerProfiles: {},
     profileLibraries: {},
-    settings: { muted: false, reducedMotion: false, highContrast: false, aiPaceOffset: 0, theme: "sunset-sprint", focusKeyHelper: true },
+    settings: { muted: false, reducedMotion: false, highContrast: false, aiPaceOffset: 0, theme: "sunset-sprint", focusKeyHelper: true, raceTypingMode: "strict" },
     passages: structuredClone(STARTER_PASSAGES),
     selectedPassageCategory: "Biblical Passages",
     collapsedPassageSections: {},

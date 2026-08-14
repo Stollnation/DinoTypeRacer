@@ -47,6 +47,7 @@ let historicalReturnScreen = null;
 let mistakeReviewResult = null;
 let mistakeScope = "race";
 let raceFinishTimer = null;
+let quickIntroResult = null;
 let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
@@ -246,6 +247,7 @@ function showScreen(name, { historyMode = "push" } = {}) {
   pushScreenHistory(name, historyMode);
   document.title = screenTitle(name);
   window.scrollTo({ top: 0, behavior: data.settings.reducedMotion ? "auto" : "smooth" });
+  if (name === "results") setTimeout(() => { const button = $("#nextRaceButton"); if (button && !button.disabled && !button.classList.contains("hidden")) button.focus(); }, 0);
 }
 
 function home({ historyMode = "push" } = {}) { clearTimeout(raceFinishTimer); if (raceActive) pauseRace(true); data.profile.calibration ? showDashboard({ preserveRace: raceActive, historyMode }) : showScreen("welcome", { historyMode }); }
@@ -304,7 +306,7 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
 }
 
 function startCalibration() {
-  calibrationSession = new TypingSession(CONFIG.calibrationText, { ignoreMistakes: calibrationMode === "flow" });
+  calibrationSession = new TypingSession(nextCalibrationText(), { ignoreMistakes: calibrationMode === "flow" });
   calibrationDeadline = null;
   $("#calibrationTimer").textContent = CONFIG.calibrationSeconds;
   $("#calibrationWpm").textContent = "0";
@@ -388,6 +390,7 @@ function renderTyping(card, session) {
   const focusKeys = card.id === "raceTyping" ? new Set(raceSetup?.focusKeys || activeFocusKeys()) : new Set();
   characters.forEach((node, index) => {
     node.className = `typing-char ${index < session.index ? "typed" : "remaining"}`;
+    if (session.missedIndices?.has(index)) node.classList.add("missed");
     if (index >= session.index && focusKeys.has(normalizedFocusKey(node.textContent))) node.classList.add("focus-key");
     if (index === session.index && !session.finished) node.classList.add("current");
     if (index === session.index && session.errorChar) node.classList.add("error");
@@ -407,10 +410,26 @@ function selectCalibrationMode(mode) {
     button.classList.toggle("selected", active);
     button.setAttribute("aria-checked", String(active));
   });
-  calibrationSession = new TypingSession(CONFIG.calibrationText, { ignoreMistakes: mode === "flow" });
+  calibrationSession = new TypingSession(nextCalibrationText(), { ignoreMistakes: mode === "flow" });
   renderTyping($("#calibrationTyping"), calibrationSession);
   $("#calibrationHint").textContent = `${mode === "flow" ? "Mistakes are counted but do not stop you" : "Mistakes must be corrected"} - Starts on your first keystroke`;
   $("#calibrationTyping").focus();
+}
+
+function syncRaceTypingModeButtons() {
+  $$("[data-race-mode]").forEach((button) => {
+    const active = button.dataset.raceMode === (data.settings.raceTypingMode || "strict");
+    button.classList.toggle("selected", active);
+    button.setAttribute("aria-checked", String(active));
+  });
+}
+
+function selectRaceTypingMode(mode) {
+  if (!["strict", "flow"].includes(mode)) return;
+  data.settings.raceTypingMode = mode;
+  persist();
+  syncRaceTypingModeButtons();
+  toast(`${mode === "flow" ? "Flow" : "Strict"} race mode selected.`);
 }
 
 function renderCharacters() {
@@ -425,7 +444,8 @@ function renderCharacters() {
 }
 
 function aiPaceBaseWpm() {
-  return data.profile.calibration?.wpm || 35;
+  const progress = progressionState();
+  return Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35;
 }
 
 function renderAiPaceControl(offset = data.settings.aiPaceOffset) {
@@ -437,6 +457,7 @@ function renderAiPaceControl(offset = data.settings.aiPaceOffset) {
   $("#aiPaceValue").textContent = `${pace > 0 ? "+" : ""}${pace}%`;
   $("#aiPaceDescription").textContent = aiPaceLabel(pace);
   $("#aiPaceRange").textContent = `Projected rivals: ${range.low}-${range.high} WPM`;
+  syncRaceTypingModeButtons();
 }
 
 function setAiPace(offset, save = false) {
@@ -507,7 +528,7 @@ function progressionState() {
   const key = selectedPassageCategory || "Biblical Passages";
   if (!data.progressionByCategory[key]) data.progressionByCategory[key] = key === "Biblical Passages" && data.progression ? data.progression : {};
   const progress = data.progressionByCategory[key];
-  const defaults = { level: 1, unlockedLevel: 1, order: "straight", lastFiveAverage: null, randomPassageIds: [], replayLimit: 2, replayScope: "level", replayUsedTotal: 0, replayUsedByLevel: {}, levelHistory: {} };
+  const defaults = { level: 1, unlockedLevel: 1, order: "random", lastFiveAverage: null, aiBaselineWpm: null, randomPassageIds: [], replayLimit: 2, replayScope: "level", replayUsedTotal: 0, replayUsedByLevel: {}, levelHistory: {} };
   Object.entries(defaults).forEach(([name, value]) => { if (progress[name] === undefined) progress[name] = structuredClone(value); });
   data.progression = progress;
   return progress;
@@ -527,6 +548,11 @@ function renderChampionshipMap(totalLevels) {
   const progress = progressionState();
   progress.unlockedLevel = Math.max(1, Math.min(totalLevels, progress.unlockedLevel || 1));
   progress.level = Math.max(1, Math.min(progress.unlockedLevel, progress.level || 1));
+  const challengePassages = activeChallengePassages();
+  if (progress.order === "random" && !progress.randomPassageIds.length && !data.activeChampionship) {
+    progress.randomPassageIds = shufflePassageIds(challengePassages);
+    persist();
+  }
   const completed = Object.values(progress.levelHistory).filter((attempts) => attempts?.length).length;
   $("#championshipCompletion").textContent = `${completed} of ${totalLevels} levels completed`;
   $("#levelButtons").innerHTML = Array.from({ length: totalLevels }, (_, index) => {
@@ -599,6 +625,36 @@ function selectPassageOrder(order) {
   showDashboard();
 }
 
+function racePassageIdsForCategory(category = selectedPassageCategory) {
+  return new Set(data.passages.filter((item) => item.enabled && (item.category || "General") === category).map((item) => item.id));
+}
+
+function resetCurrentCategoryRaces() {
+  const category = selectedPassageCategory || "Biblical Passages";
+  const passageIds = racePassageIdsForCategory(category);
+  data.records = (data.records || []).filter((record) => !passageIds.has(record.passageId));
+  data.playerProfiles ||= {};
+  Object.values(data.playerProfiles).forEach((profile) => {
+    if (Array.isArray(profile.records)) profile.records = profile.records.filter((record) => !passageIds.has(record.passageId));
+  });
+  if (data.bestReplay && passageIds.has(data.bestReplay.passageId)) data.bestReplay = null;
+  if (lastRaceResult && passageIds.has(lastRaceResult.passageId)) lastRaceResult = data.records[0] || null;
+  if (mistakeReviewResult && passageIds.has(mistakeReviewResult.passageId)) mistakeReviewResult = null;
+  if (selectedReviewResult && passageIds.has(selectedReviewResult.passageId)) selectedReviewResult = null;
+  if (championship && (!championship.passageIds || championship.passageIds.some((id) => passageIds.has(id)))) championship = null;
+  reviewingCompletedLevel = false;
+  replayingCompletedRace = null;
+  raceActive = false;
+  racePausedAt = null;
+  clearTimeout(raceFinishTimer);
+  data.activeChampionship = null;
+  if (data.progressionByCategory) delete data.progressionByCategory[category];
+  data.progression = null;
+  persist();
+  showDashboard();
+  toast(`Reset races for ${category}.`);
+}
+
 function shufflePassageIds(passages) {
   const ids = passages.map((item) => item.id);
   for (let index = ids.length - 1; index > 0; index -= 1) {
@@ -609,6 +665,111 @@ function shufflePassageIds(passages) {
 }
 
 
+function randomChoice(items) {
+  return items?.length ? items[Math.floor(Math.random() * items.length)] : null;
+}
+
+function shuffleIndices(length) {
+  const indices = Array.from({ length }, (_, index) => index);
+  for (let index = indices.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [indices[index], indices[swap]] = [indices[swap], indices[index]];
+  }
+  return indices;
+}
+
+function nextCalibrationText() {
+  data.calibrationQueue ||= [];
+  if (!data.calibrationQueue.length) data.calibrationQueue = shuffleIndices(CONFIG.calibrationTexts?.length || 0);
+  const index = data.calibrationQueue.shift();
+  return CONFIG.calibrationTexts?.[index] || CONFIG.calibrationText;
+}
+
+function quickIntroPassage() {
+  data.quickIntroQueue ||= [];
+  if (!data.quickIntroQueue.length) data.quickIntroQueue = shuffleIndices(CONFIG.quickRaceParagraphs.length);
+  const index = data.quickIntroQueue.shift();
+  const paragraph = CONFIG.quickRaceParagraphs[index] || randomChoice(CONFIG.quickRaceParagraphs) || CONFIG.calibrationText;
+  return {
+    id: `quick-intro-passage-${index}`,
+    title: "Quick Dino Dash",
+    source: "Intro Race",
+    category: "Quick Race",
+    enabled: true,
+    text: paragraph,
+  };
+}
+
+function startIntroRace(name) {
+  const requestedName = String(name || "").trim();
+  if (!requestedName) return;
+  clearTimeout(raceFinishTimer);
+  cancelAnimationFrame(calibrationFrame);
+  if (data.profile.name && profileKey(data.profile.name) !== profileKey(requestedName)) saveActiveProfileLibrary(data.profile.name);
+  if (data.profile.name) saveActivePlayerProfile(data.profile.name);
+  data.profile.name = requestedName;
+  loadActiveProfileLibrary(requestedName);
+  const passage = quickIntroPassage();
+  const track = randomChoice(manifest.tracks) || manifest.tracks[0];
+  championship = {
+    id: `quick-intro-${Date.now()}`,
+    playerName: requestedName,
+    totalRaces: 1,
+    totalLevels: 1,
+    level: 1,
+    order: "quick",
+    mode: "adaptive",
+    difficulty: "normal",
+    passageIds: [passage.id],
+    trackIds: [track?.id].filter(Boolean),
+    aiBaselineWpm: data.profile.calibration?.wpm || 35,
+    rounds: [],
+    quickIntro: true,
+    quickPassage: passage,
+  };
+  data.activeChampionship = null;
+  reviewingCompletedLevel = false;
+  selectedReviewResult = null;
+  replayingCompletedRace = null;
+  quickIntroResult = null;
+  persist();
+  startRace();
+}
+
+function renderQuickRaceResult(result) {
+  quickIntroResult = result;
+  $("#finishOverlay").classList.add("hidden");
+  $("#quickResultTitle").textContent = result.perfect ? "Perfect quick dash!" : `${ordinal(result.place)} place!`;
+  $("#quickResultSummary").textContent = `${result.playerName || "Racer"}, your quick race pace is now saved as your starting pace.`;
+  $("#quickResultWpm").textContent = Math.round(result.wpm);
+  $("#quickResultAccuracy").textContent = `${Math.round(result.accuracy * 100)}%`;
+  $("#quickResultPlace").textContent = ordinal(result.place);
+  $("#quickLeaderboardStatus").textContent = "Saving leaderboard score online...";
+  $("#quickResultOverlay").classList.remove("hidden");
+  setTimeout(() => $("#quickResultOverlay [data-action='continue-after-quick-race']")?.focus(), 0);
+}
+
+function finishQuickIntroRace(result, now, time) {
+  data.profile.calibration = { playerName: result.playerName, wpm: Math.max(5, result.wpm), accuracy: result.accuracy, date: new Date().toISOString(), method: "quick-race" };
+  data.activeChampionship = null;
+  championship = null;
+  data.records.unshift(result);
+  data.records = data.records.slice(0, 5000);
+  if (!data.bestReplay || time < data.bestReplay.time) data.bestReplay = { playerName: result.playerName, time, wpm: result.wpm, passageId: result.passageId, samples: raceSession.samples.map((sample) => ({ t: sample.t, p: sample.p })) };
+  persist();
+  lastRaceResult = result;
+  renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
+  renderQuickRaceResult(result);
+  void syncLeaderboardResult(result).then((savedOnline) => {
+    if (quickIntroResult?.id !== result.id) return;
+    $("#quickLeaderboardStatus").textContent = savedOnline ? "Leaderboard score synced online." : onlineLeaderboardError;
+  });
+}
+
+function continueAfterQuickRace() {
+  $("#quickResultOverlay").classList.add("hidden");
+  showDashboard();
+}
 function latestLevelAttempt(level) {
   return levelAttempts(level).at(-1) || null;
 }
@@ -689,7 +850,7 @@ function startChampionship({ skipReplayCharge = false } = {}) {
     difficulty: "normal",
     passageIds,
     trackIds: passageIds.map((_, index) => manifest.tracks[(start + index) % manifest.tracks.length].id),
-    aiBaselineWpm: data.profile.calibration?.wpm || 35,
+    aiBaselineWpm: Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35,
     rounds: [],
   };
   data.activeChampionship = championship;
@@ -697,28 +858,36 @@ function startChampionship({ skipReplayCharge = false } = {}) {
   startRace();
 }
 
+function registerPlayerKeyHit(now) {
+  if (!racePlayer) return;
+  const previous = racePlayer.keyHitAt || 0;
+  racePlayer.keyHitInterval = previous ? now - previous : 260;
+  racePlayer.keyHitAt = now;
+}
+
 function startRace({ roundNumberOverride = null } = {}) {
   clearTimeout(raceFinishTimer);
   if (!championship) { startChampionship(); return; }
   const roundNumber = roundNumberOverride || championship.rounds.length + 1;
   const passageId = championship.passageIds[roundNumber - 1];
-  const passage = data.passages.find((item) => item.id === passageId) || choosePassage(data.passages, selectedPassageId);
+  const passage = championship.quickIntro ? championship.quickPassage : (data.passages.find((item) => item.id === passageId) || choosePassage(data.passages, selectedPassageId));
   if (!passage) { toast("Enable at least one passage before racing."); return; }
-  selectedPassageId = passage.id;
+  if (!championship.quickIntro) selectedPassageId = passage.id;
   const baseline = adjustedAiBaseline(data.profile.calibration?.wpm || 35, data.settings.aiPaceOffset);
   const { mode, difficulty } = championship;
   const fallbackTrackIndex = (((championship.level || 1) - 1) * CHAMPIONSHIP_RACES + roundNumber - 1) % manifest.tracks.length;
   const track = manifest.tracks.find((item) => item.id === championship.trackIds?.[roundNumber - 1]) || manifest.tracks[fallbackTrackIndex];
   renderer.setTrack(track.id);
-  raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: activeFocusKeys() };
-  raceSession = new TypingSession(passage.text);
+  raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: activeFocusKeys(), quickIntro: Boolean(championship.quickIntro) };
+  raceSession = new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
   raceRacers = createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId: data.profile.characterId });
   racePlayer = { id: "player", name: championship.playerName || data.profile.name, characterId: data.profile.characterId, progress: 0, finishTime: null };
   const modeName = mode === "adaptive" ? "Adaptive" : mode === "ghost" ? "Personal Best" : `${difficulty[0].toUpperCase() + difficulty.slice(1)} Fixed`;
-  $("#raceModeLabel").textContent = `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
+  $("#raceModeLabel").textContent = championship.quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
   $("#raceTitle").textContent = passage.source ? `${passage.title} - ${passage.source}` : passage.title;
   $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = "100%"; $("#raceProgress").textContent = "0";
-  $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${raceTypingInstruction()}` : "The race starts after the countdown";
+  const typingModeHint = data.settings.raceTypingMode === "flow" ? "Flow mode: missed letters turn red." : "Strict mode: use Backspace to fix mistakes.";
+  $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${typingModeHint} ${raceTypingInstruction()}` : `The race starts after the countdown - ${typingModeHint}`;
   $("#raceLastResultsButton").classList.toggle("hidden", !lastRaceResult);
   renderTyping($("#raceTyping"), raceSession);
   $("#raceTyping").classList.add("typing-locked");
@@ -730,6 +899,7 @@ function startRace({ roundNumberOverride = null } = {}) {
   raceSession.startTime = raceStartTime;
   $("#countdown").classList.remove("hidden");
   $("#finishOverlay").classList.add("hidden");
+  $("#quickResultOverlay")?.classList.add("hidden");
   $("#finishOverlay").classList.remove("is-perfect");
   $("#perfectCelebration").classList.add("hidden");
   $("#pauseOverlay").classList.add("hidden");
@@ -746,7 +916,7 @@ function updateRace(now) {
     renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: true });
     raceFrame = requestAnimationFrame(updateRace); return;
   }
-  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceTyping").classList.remove("typing-locked"); $("#raceTyping").setAttribute("aria-disabled", "false"); $("#raceHint").textContent = raceTypingInstruction(); audio.play("start"); $("#raceTyping").focus(); }
+  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceTyping").classList.remove("typing-locked"); $("#raceTyping").setAttribute("aria-disabled", "false"); $("#raceHint").textContent = `${data.settings.raceTypingMode === "flow" ? "Flow mode active." : "Strict mode active."} ${raceTypingInstruction()}`.trim(); audio.play("start"); $("#raceTyping").focus(); }
   const elapsed = Math.max(0, (now - raceStartTime) / 1000);
   raceRacers.forEach((racer) => updateAi(racer, elapsed, raceSession.text.length));
   racePlayer.progress = raceSession.progress;
@@ -807,7 +977,8 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   if (!forcePlayerFirst) raceRacers.forEach((racer) => updateAi(racer, time, raceSession.text.length));
   const finishOrder = rankRace(racePlayer, raceRacers, time);
   const place = finishOrder.find((racer) => racer.id === "player").place;
-  const result = { id: `race-${Date.now()}`, championshipId: championship.id, playerName: racePlayer.name, date: new Date().toISOString(), mode: raceSetup.mode, difficulty: raceSetup.difficulty, level: championship.level, passageId: raceSetup.passage.id, passageTitle: raceSetup.passage.title, roundNumber: raceSetup.roundNumber, time, wpm: raceSession.wpm(now), peakWpm: raceSession.peakWpm(), accuracy: raceSession.accuracy, errors: raceSession.errors, perfect: raceSession.errors === 0, trackId: raceSetup.trackId, mistakes: raceSession.mistakes.map((mistake) => ({ ...mistake })), place, fieldSize: finishOrder.length, finishOrder: finishOrder.map((racer) => ({ ...racer })) };
+  const result = { id: `${raceSetup.quickIntro ? "quick" : "race"}-${Date.now()}`, championshipId: championship.id, playerName: racePlayer.name, date: new Date().toISOString(), mode: raceSetup.quickIntro ? "quick-test" : raceSetup.mode, difficulty: raceSetup.difficulty, level: championship.level, passageId: raceSetup.passage.id, passageTitle: raceSetup.passage.title, roundNumber: raceSetup.roundNumber, time, wpm: raceSession.wpm(now), peakWpm: raceSession.peakWpm(), accuracy: raceSession.accuracy, errors: raceSession.errors, perfect: raceSession.errors === 0, trackId: raceSetup.trackId, mistakes: raceSession.mistakes.map((mistake) => ({ ...mistake })), place, fieldSize: finishOrder.length, finishOrder: finishOrder.map((racer) => ({ ...racer })) };
+  if (raceSetup.quickIntro) { finishQuickIntroRace(result, now, time); return; }
   const roundResult = { raceId: result.id, passageId: result.passageId, playerName: result.playerName, mistakes: result.mistakes, finishOrder, playerWpm: result.wpm, playerPlace: place };
   const replacedRace = replayingCompletedRace && replayingCompletedRace.roundNumber === result.roundNumber ? replayingCompletedRace : null;
   if (replacedRace) {
@@ -835,6 +1006,7 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   $("#raceHint").textContent = `Finished ${ordinal(result.place)} - race results in 4 seconds`;
   raceFinishTimer = setTimeout(() => {
     $("#finishOverlay").classList.add("hidden");
+    $("#quickResultOverlay")?.classList.add("hidden");
   $("#finishOverlay").classList.remove("is-perfect");
   $("#perfectCelebration").classList.add("hidden"); renderResults(result, { levelReview: reviewingCompletedLevel }); showScreen("results");
   }, 4000);
@@ -915,9 +1087,11 @@ async function syncLeaderboardResult(result) {
   try {
     onlineLeaderboardRows = await submitOnlineLeaderboard(result);
     onlineLeaderboardError = "";
+    return true;
   } catch (error) {
-    onlineLeaderboardError = "Online leaderboard is unavailable right now, so this score is saved locally.";
+    onlineLeaderboardError = "Online leaderboard save failed. This score is still saved on this browser.";
     console.warn(error);
+    return false;
   }
 }
 
@@ -926,7 +1100,7 @@ async function refreshOnlineLeaderboard() {
     onlineLeaderboardRows = await fetchOnlineLeaderboard();
     onlineLeaderboardError = "";
   } catch (error) {
-    onlineLeaderboardError = "Online leaderboard is unavailable right now. Showing saved local scores.";
+    onlineLeaderboardError = "Online leaderboard load failed. Showing scores saved on this browser.";
     console.warn(error);
   }
 }
@@ -940,11 +1114,11 @@ async function renderLeaderboard() {
   let rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
   const localCount = localRows.length;
   const onlineCount = onlineLeaderboardRows?.length || 0;
-  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown (${onlineCount} online, ${localCount} local). Loading latest online scores...` : "Finish a race to add the first leaderboard entry. Loading online scores...";
+  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown. Loading online scores; saved scores from this browser are visible now.` : "Finish a race to add the first leaderboard entry. Loading online scores...";
   renderLeaderboardRows(rows);
   await refreshOnlineLeaderboard();
   rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
-  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown (${onlineLeaderboardRows?.length || 0} online, ${localCount} local).${onlineLeaderboardError ? ` ${onlineLeaderboardError}` : ""}` : `No leaderboard entries yet.${onlineLeaderboardError ? ` ${onlineLeaderboardError}` : ""}`;
+  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown. ${onlineLeaderboardError || `Online leaderboard synced. Also showing ${localCount} score${localCount === 1 ? "" : "s"} saved on this browser.`}` : `No leaderboard entries yet. ${onlineLeaderboardError || "Finish a race to save a score on this browser and sync it online."}`;
   renderLeaderboardRows(rows);
 }
 
@@ -1037,7 +1211,8 @@ function returnFromResults() {
   showDashboard();
 }
 function updateChampionshipBaseline() {
-  championship.aiBaselineWpm = data.profile.calibration?.wpm || 35;
+  const progress = progressionState();
+  championship.aiBaselineWpm = Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35;
   data.activeChampionship = championship;
 }
 
@@ -1079,11 +1254,14 @@ function updateRecordedLevelAttempt() {
   const standings = championshipStandings(championship.rounds);
   const player = standings.find((racer) => racer.id === "player");
   const playerRounds = championship.rounds.filter((round) => Number.isFinite(round.playerWpm));
+  const averageWpm = playerRounds.reduce((sum, round) => sum + round.playerWpm, 0) / Math.max(1, playerRounds.length);
   attempt.date = new Date().toISOString();
   attempt.playerPlace = standings.findIndex((racer) => racer.id === "player") + 1;
   attempt.playerPoints = player?.points || 0;
-  attempt.averageWpm = playerRounds.reduce((sum, round) => sum + round.playerWpm, 0) / Math.max(1, playerRounds.length);
-  progress.lastFiveAverage = attempt.averageWpm;
+  attempt.averageWpm = averageWpm;
+  progress.lastFiveAverage = averageWpm;
+  const currentBaseline = Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35;
+  if (averageWpm >= currentBaseline + 3) progress.aiBaselineWpm = averageWpm + 3;
 }
 
 function recordLevelAttempt() {
@@ -1097,6 +1275,8 @@ function recordLevelAttempt() {
   progress.levelHistory[key] ||= [];
   progress.levelHistory[key].push({ championshipId: championship.id, date: new Date().toISOString(), playerPlace: standings.findIndex((racer) => racer.id === "player") + 1, playerPoints: player?.points || 0, averageWpm });
   progress.lastFiveAverage = averageWpm;
+  const currentBaseline = Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35;
+  if (averageWpm >= currentBaseline + 3) progress.aiBaselineWpm = averageWpm + 3;
   progress.unlockedLevel = Math.min(championship.totalLevels, Math.max(progress.unlockedLevel || 1, championship.level + 1));
   championship.completionRecorded = true;
   data.activeChampionship = championship;
@@ -1127,6 +1307,14 @@ function renderPodium({ historyMode = "push" } = {}) {
   $("#podiumStage").style.backgroundImage = podiumArt ? `url("${podiumArt}")` : "";
   $("#podiumStage").classList.toggle("has-custom-art", Boolean(podiumArt));
   showScreen("podium", { historyMode });
+}
+
+function openResetRacesDialog() {
+  $("#resetRacesDialog")?.showModal();
+}
+
+function closeResetRacesDialog() {
+  $("#resetRacesDialog")?.close();
 }
 
 function retryLevel() {
@@ -1232,6 +1420,7 @@ function toggleSetting(key) { data.settings[key] = !data.settings[key]; persist(
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1800); }
 
 function handleTypingKey(event) {
+  if (currentScreen === "results" && event.key === "Enter" && event.target === $("#nextRaceButton") && !$("#nextRaceButton").classList.contains("hidden") && !$("#nextRaceButton").disabled) { event.preventDefault(); nextRace(); return; }
   if (!["calibration", "race"].includes(currentScreen) || event.ctrlKey || event.metaKey || event.altKey || event.target.matches("input, textarea, select")) return;
   if (event.key === "Escape" && currentScreen === "race") { event.preventDefault(); pauseRace(); return; }
   if (event.key === "Backspace") {
@@ -1246,12 +1435,12 @@ function handleTypingKey(event) {
     if (!calibrationDeadline) { calibrationDeadline = now + CONFIG.calibrationSeconds * 1000; $("#calibrationHint").textContent = "Stay accurate and keep moving"; }
     const correct = calibrationSession.type(event.key, now); audio.play(correct ? "key" : "error"); renderTyping($("#calibrationTyping"), calibrationSession);
   } else if (raceActive && racePausedAt === null && now >= raceCountdownEnd) {
-    const correct = raceSession.type(event.key, now); audio.play(correct ? "key" : "error"); renderTyping($("#raceTyping"), raceSession);
+    const correct = raceSession.type(event.key, now); registerPlayerKeyHit(now); audio.play(correct ? "key" : "error"); renderTyping($("#raceTyping"), raceSession);
   }
 }
 
 function bindEvents() {
-  $("#profileForm").addEventListener("submit", (event) => { event.preventDefault(); const name = $("#playerName").value.trim(); if (!name) return; if (data.profile.name && profileKey(data.profile.name) !== profileKey(name)) saveActiveProfileLibrary(data.profile.name); data.profile.name = name; loadActiveProfileLibrary(name); persist(); startCalibration(); });
+  $("#profileForm").addEventListener("submit", (event) => { event.preventDefault(); startIntroRace($("#playerName").value); });
   $("#dashboardProfileForm").addEventListener("submit", saveDashboardProfile);
   $("#manualPaceForm").addEventListener("submit", saveManualPace);
   $("#passageForm").addEventListener("submit", savePassage);
@@ -1269,6 +1458,9 @@ function bindEvents() {
     if (action === "retest") startCalibration();
     if (action === "start-race") startChampionship();
     if (action === "return-to-races") returnToRaces();
+    if (action === "reset-all-races") openResetRacesDialog();
+    if (action === "close-reset-races") closeResetRacesDialog();
+    if (action === "confirm-reset-races") { closeResetRacesDialog(); resetCurrentCategoryRaces(); }
     if (action === "open-runners") { previewCharacterId = data.profile.characterId; renderCharacters(); $("#runnerDialog").showModal(); }
     if (action === "close-runners") $("#runnerDialog").close();
     if (action === "accept-runner") { data.profile.characterId = previewCharacterId; persist(); renderCharacters(); $("#runnerDialog").close(); toast(`Runner selected: ${manifest.characters.find((item) => item.id === previewCharacterId)?.displayName || previewCharacterId}.`); }
@@ -1276,6 +1468,7 @@ function bindEvents() {
     if (action === "resume") resumeRace();
     if (action === "restart-race") startRace();
     if (action === "debug-finish-first") debugFinishRaceFirst();
+    if (action === "continue-after-quick-race") continueAfterQuickRace();
     if (action === "dashboard") showDashboard();
     if (action === "retry-race") retryRace();
     if (action === "next-race") nextRace();
@@ -1301,6 +1494,7 @@ function bindEvents() {
     const toggleSection = event.target.closest("[data-toggle-section]")?.dataset.toggleSection; if (toggleSection) togglePassageSection(toggleSection);
     const edit = event.target.closest("[data-edit-passage]")?.dataset.editPassage; if (edit && !event.target.closest("button")) editPassage(edit);
     const calibrationChoice = event.target.closest("[data-calibration-mode]")?.dataset.calibrationMode; if (calibrationChoice) selectCalibrationMode(calibrationChoice);
+    const raceMode = event.target.closest("[data-race-mode]")?.dataset.raceMode; if (raceMode) selectRaceTypingMode(raceMode);
     const scope = event.target.closest("[data-mistake-scope]")?.dataset.mistakeScope; if (scope) { mistakeScope = scope; renderMistakeStats(mistakeReviewResult, mistakeScope); }
     const use = event.target.closest("[data-use-passage]")?.dataset.usePassage; if (use) { const passage = data.passages.find((item) => item.id === use); selectedPassageId = use; if (passage?.category) selectedPassageCategory = passage.category; persist(); toast("Race passage selected."); renderPassageList(); }
     const duplicate = event.target.closest("[data-duplicate-passage]")?.dataset.duplicatePassage; if (duplicate) { const source = data.passages.find((item) => item.id === duplicate); const copy = { ...source, id: `passage-${Date.now()}`, title: `${source.title} Copy` }; data.passages.push(copy); persist(); editPassage(copy.id); toast("Passage duplicated."); }
