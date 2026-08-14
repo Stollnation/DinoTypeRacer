@@ -118,6 +118,19 @@ export class RaceRenderer {
     return { x: this.cameraState.x, world };
   }
 
+  keyHitRotation(racer, time) {
+    if (this.reducedMotion || !racer?.keyHitAt) return 0;
+    const elapsed = Math.max(0, time - racer.keyHitAt);
+    const duration = 260;
+    if (elapsed >= duration) return 0;
+    const interval = racer.keyHitInterval || 260;
+    const amplitude = interval < 120 ? 0 : interval < 220 ? 4 * ((interval - 120) / 100) : 4;
+    if (!amplitude) return 0;
+    const t = elapsed / duration;
+    const degrees = t < 0.38 ? -amplitude + (amplitude * 2) * (t / 0.38) : amplitude * (1 - ((t - 0.38) / 0.62));
+    return degrees * Math.PI / 180;
+  }
+
   draw({ racers, player, time = 0, countdown = false }) {
     const { ctx, canvas } = this;
     const track = this.track();
@@ -173,7 +186,14 @@ export class RaceRenderer {
         const footAnchorY = character.footAnchorY ?? frameHeight;
         const drawX = (useCenterAnchor ? x - width * 0.5 : x - width * 0.38) + offsetX;
         const drawY = (useCenterAnchor ? laneY - height * 0.5 : laneY - height * (footAnchorY / frameHeight)) + offsetY;
-        ctx.drawImage(image, frameIndex * frameWidth, 0, frameWidth, frameHeight, drawX, drawY, width, height);
+        const rotation = isPlayer ? this.keyHitRotation(racer, time) : 0;
+        if (rotation) {
+          ctx.translate(drawX + width * 0.5, drawY + height * 0.5);
+          ctx.rotate(rotation);
+          ctx.drawImage(image, frameIndex * frameWidth, 0, frameWidth, frameHeight, -width * 0.5, -height * 0.5, width, height);
+        } else {
+          ctx.drawImage(image, frameIndex * frameWidth, 0, frameWidth, frameHeight, drawX, drawY, width, height);
+        }
       } else {
         const radius = 24 * (track.laneScales?.[laneIndex] ?? 1);
         ctx.fillStyle = character.color;

@@ -3,6 +3,7 @@ export class TypingSession {
     this.text = text;
     this.index = 0;
     this.errorChar = "";
+    this.missedIndices = new Set();
     this.correctKeystrokes = 0;
     this.totalKeystrokes = 0;
     this.errors = 0;
@@ -16,8 +17,8 @@ export class TypingSession {
   type(char, now = performance.now()) {
     if (this.finished || char.length !== 1) return false;
     if (this.startTime === null) this.startTime = now;
+    if (this.errorChar) return false;
     this.totalKeystrokes += 1;
-    if (this.errorChar) { this.errors += 1; this.recordMistake(char, now); this.errorChar = char; return false; }
     if (char === this.text[this.index]) {
       this.index += 1;
       this.correctKeystrokes += 1;
@@ -28,6 +29,7 @@ export class TypingSession {
     this.errors += 1;
     this.recordMistake(char, now);
     if (this.ignoreMistakes) {
+      this.missedIndices.add(this.index);
       this.index += 1;
       this.sample(now);
       if (this.index >= this.text.length) this.endTime = now;
