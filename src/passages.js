@@ -88,6 +88,33 @@ export function importPassages(source) {
   return passages;
 }
 
+export function importNumberedInspiredPassages(source, { category = "Inspired Passages", idPrefix = "inspired" } = {}) {
+  const normalizedSource = String(source ?? "").replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  const blocks = normalizedSource.split(/(?=^\d+\.\s+\*\*)/m).map((block) => block.trim()).filter(Boolean);
+  const passages = blocks.map((block) => {
+    const lines = block.split("\n");
+    const heading = lines.shift()?.trim() || "";
+    const headingMatch = heading.match(/^(\d+)\.\s+\*\*(.+)\*\*$/);
+    if (!headingMatch) throw new Error("Each inspired passage needs a numbered bold heading.");
+    const number = Number(headingMatch[1]);
+    const headingMarkup = headingMatch[2];
+    const book = normalizeText(headingMarkup.match(/\*([^*]+)\*/)?.[1] || "Harry Potter");
+    const label = normalizeText(headingMarkup.replace(/\*/g, ""));
+    const character = normalizeText(label.split(",")[0].replace(/-inspired$/i, "")) || "Character";
+    const passageText = normalizeText(lines.join(" ").replace(/^[\s\u201c\u201d"]+|[\s\u201c\u201d"]+$/g, ""));
+    return validatePassage({
+      id: `${idPrefix}-${String(number).padStart(2, "0")}`,
+      title: `${character} - ${book} ${String(number).padStart(2, "0")}`,
+      text: passageText,
+      category,
+      source: label,
+      enabled: true,
+    });
+  });
+  if (!passages.length) throw new Error("The inspired passage file does not contain any passages.");
+  return passages;
+}
+
 function importLinePassages(lines) {
   const category = lines[0] || "Imported Passages";
   return lines.slice(1).map((line, index) => validatePassage({

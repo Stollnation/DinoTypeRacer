@@ -1,6 +1,6 @@
-import { CONFIG, THEMES, STARTER_PASSAGES, MOVIE_QUOTE_SOURCE_BY_ID } from "./config.js";
+import { CONFIG, THEMES, STARTER_PASSAGES } from "./config.js";
 import { loadState, saveState } from "./storage.js";
-import { choosePassage, exportPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
+import { choosePassage, exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
 import { calculatePlace, createAiRacers, updateAi } from "./ai.js";
 import { GameAudio } from "./audio.js";
@@ -60,7 +60,7 @@ async function init() {
   await installBundledPassages();
   renderer = new RaceRenderer($("#raceCanvas"), manifest);
   await renderer.load();
-  audio = new GameAudio(data.settings.muted);
+  audio = new GameAudio({ keyNoise: data.settings.keyNoise, musicEnabled: data.settings.musicEnabled, musicElement: $("#musicTrack") });
   const perfectAsset = manifest.ui?.perfectCelebration;
   if (perfectAsset) $("#perfectCelebration").src = perfectAsset;
   $$('[data-game-title]').forEach((node) => node.textContent = CONFIG.title);
@@ -72,10 +72,23 @@ async function init() {
   if (data.profile.calibration) showDashboard({ historyMode: "replace" }); else showScreen("welcome", { historyMode: "replace" });
 }
 async function installBundledPassages() {
-  if ((data.libraryVersion || 0) >= 5) { normalizeBuiltInPassageData(); loadActiveProfileLibrary(); return; }
-  const response = await fetch("assets/passages/biblical-passages.txt");
-  if (!response.ok) throw new Error("The bundled Biblical Passages could not be loaded.");
-  const incoming = [...STARTER_PASSAGES, ...importPassages(await response.text())];
+  if ((data.libraryVersion || 0) >= 6) { normalizeBuiltInPassageData(); loadActiveProfileLibrary(); return; }
+  const [bibleResponse, harryPotterResponse] = await Promise.all([
+    fetch("assets/passages/biblical-passages.txt"),
+    fetch("assets/passages/harry-potter-inspired.txt"),
+  ]);
+  if (!bibleResponse.ok) throw new Error("The bundled Biblical Passages could not be loaded.");
+  if (!harryPotterResponse.ok) throw new Error("The bundled Harry Potter-inspired passages could not be loaded.");
+  const incoming = [
+    ...STARTER_PASSAGES,
+    ...importPassages(await bibleResponse.text()),
+    ...importNumberedInspiredPassages(await harryPotterResponse.text(), { category: "Harry Potter-Inspired", idPrefix: "harry-potter" }),
+  ];
+  const withoutOldMovieQuotes = (items) => (items || []).filter((item) => !["Movie Quotes", "Movie-Style Quotes"].includes(item.category));
+  data.passages = withoutOldMovieQuotes(data.passages);
+  Object.values(data.profileLibraries || {}).forEach((library) => {
+    if (Array.isArray(library.passages)) library.passages = withoutOldMovieQuotes(library.passages);
+  });
   const existing = new Set(data.passages.map((item) => `${item.category || "General"}|${item.title}`.toLowerCase()));
   incoming.forEach((item) => {
     const key = `${item.category}|${item.title}`.toLowerCase();
@@ -90,7 +103,7 @@ async function installBundledPassages() {
     });
   });
   normalizeBuiltInPassageData();
-  data.libraryVersion = 5;
+  data.libraryVersion = 6;
   if (!data.selectedPassageCategory) selectedPassageCategory = "Biblical Passages";
   loadActiveProfileLibrary();
   persist();
@@ -98,19 +111,6 @@ async function installBundledPassages() {
 function normalizeBuiltInPassageData() {
   const normalize = (passage) => {
     if (!passage) return passage;
-    if (passage.category === "Movie-Style Quotes") {
-      passage.category = "Movie Quotes";
-      passage.title = passage.title.replace("Movie-Style Challenge", "Movie Quote");
-      passage.source ||= "Original Movie Quote";
-    }
-    if (passage.category === "Movie Quotes") {
-      const canonicalSource = MOVIE_QUOTE_SOURCE_BY_ID[passage.id];
-      if (canonicalSource) {
-        passage.source = canonicalSource;
-      } else if (!passage.source || /^Original .*Film$/i.test(passage.source) || /^Original Movie Quote$/i.test(passage.source)) {
-        passage.source = "Original Movie Quote";
-      }
-    }
     return passage;
   };
   const dedupe = (items) => {
@@ -125,10 +125,10 @@ function normalizeBuiltInPassageData() {
   data.passages = dedupe(data.passages);
   Object.values(data.profileLibraries || {}).forEach((library) => {
     if (Array.isArray(library.passages)) library.passages = dedupe(library.passages);
-    if (library.selectedPassageCategory === "Movie-Style Quotes") library.selectedPassageCategory = "Movie Quotes";
+    if (["Movie Quotes", "Movie-Style Quotes"].includes(library.selectedPassageCategory)) library.selectedPassageCategory = "Harry Potter-Inspired";
   });
-  if (selectedPassageCategory === "Movie-Style Quotes") selectedPassageCategory = "Movie Quotes";
-  if (data.selectedPassageCategory === "Movie-Style Quotes") data.selectedPassageCategory = "Movie Quotes";
+  if (["Movie Quotes", "Movie-Style Quotes"].includes(selectedPassageCategory)) selectedPassageCategory = "Harry Potter-Inspired";
+  if (["Movie Quotes", "Movie-Style Quotes"].includes(data.selectedPassageCategory)) data.selectedPassageCategory = "Harry Potter-Inspired";
 }
 function profileKey(name = data.profile.name) {
   return String(name || "guest").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "guest";
@@ -253,11 +253,21 @@ function showScreen(name, { historyMode = "push" } = {}) {
   renderGlobalNavigation();
   pushScreenHistory(name, historyMode);
   document.title = screenTitle(name);
+  if (audio) {
+    if (name === "calibration" || (name === "race" && raceActive && racePausedAt === null)) audio.playMusic();
+    else audio.pauseMusic();
+  }
   window.scrollTo({ top: 0, behavior: data.settings.reducedMotion ? "auto" : "smooth" });
   if (name === "results") setTimeout(() => { const button = $("#nextRaceButton"); if (button && !button.disabled && !button.classList.contains("hidden")) button.focus(); }, 0);
 }
 
-function home({ historyMode = "push" } = {}) { clearTimeout(raceFinishTimer); if (raceActive) pauseRace(true); data.profile.calibration ? showDashboard({ preserveRace: raceActive, historyMode }) : showScreen("welcome", { historyMode }); }
+function home({ historyMode = "push" } = {}) { clearTimeout(raceFinishTimer); if (raceActive) pauseRace(true); audio?.pauseMusic({ reset: true }); showScreen("welcome", { historyMode }); }
+
+function openRaceControls({ historyMode = "push" } = {}) {
+  clearTimeout(raceFinishTimer);
+  if (raceActive && raceSession && !raceSession.finished && racePausedAt === null) pauseRace(true);
+  showDashboard({ preserveRace: Boolean(raceActive && raceSession && !raceSession.finished), historyMode });
+}
 
 function showFinishScreen({ historyMode = "push" } = {}) {
   const result = data.records[0] || lastRaceResult;
@@ -300,6 +310,7 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   $("#lastResultsReadyButton").classList.toggle("hidden", !lastRaceResult);
   $("#baselineWpm").textContent = Math.round(data.profile.calibration?.wpm || 0);
   $("#baselineAccuracy").textContent = `${Math.round((data.profile.calibration?.accuracy || 0) * 100)}% accuracy`;
+  $("#startChampionshipButton").classList.toggle("attention-blink", Boolean(data.profile.calibration) && data.profile.startHintSeen !== true);
   const challengePassages = activeChallengePassages();
   const progress = progressionState();
   const levels = Math.max(1, Math.ceil(challengePassages.length / CHAMPIONSHIP_RACES));
@@ -322,6 +333,7 @@ function startCalibration() {
   renderTyping($("#calibrationTyping"), calibrationSession);
   showScreen("calibration");
   $("#calibrationTyping").focus();
+  audio.playMusic({ restart: true });
   cancelAnimationFrame(calibrationFrame);
   calibrationFrame = requestAnimationFrame(updateCalibration);
 }
@@ -340,7 +352,9 @@ function updateCalibration(now) {
 function finishCalibration(now) {
   calibrationSession.endTime = now;
   data.profile.calibration = { playerName: data.profile.name, wpm: Math.max(5, calibrationSession.wpm(now)), accuracy: calibrationSession.accuracy, date: new Date().toISOString() };
+  if (data.profile.startHintSeen !== true) data.profile.startHintSeen = false;
   persist();
+  audio.pauseMusic({ reset: true });
   toast(`Pace saved: ${Math.round(data.profile.calibration.wpm)} WPM`);
   showDashboard();
 }
@@ -351,7 +365,9 @@ function saveManualPace(event) {
   if (!Number.isFinite(wpm) || wpm < 5 || wpm > 250) { toast("Enter a starting pace from 5 to 250 WPM."); return; }
   cancelAnimationFrame(calibrationFrame);
   data.profile.calibration = { playerName: data.profile.name, wpm, accuracy: 1, date: new Date().toISOString(), method: "manual" };
+  data.profile.startHintSeen = true;
   persist();
+  audio.pauseMusic({ reset: true });
   audio.play("save");
   toast(`Starting pace saved: ${wpm} WPM`);
   showDashboard();
@@ -458,6 +474,8 @@ function aiPaceBaseWpm() {
 function renderAiPaceControl(offset = data.settings.aiPaceOffset) {
   const helper = $("#focusKeyHelperSelect");
   if (helper) helper.value = data.settings.focusKeyHelper === false ? "disabled" : "enabled";
+  const keyNoise = $("#keyNoiseSelect");
+  if (keyNoise) keyNoise.value = data.settings.keyNoise === false ? "disabled" : "enabled";
   const pace = clampAiPace(offset);
   const range = projectedAiRange(aiPaceBaseWpm(), pace, CONFIG.adaptiveRatios);
   $("#aiPaceSlider").value = pace;
@@ -495,7 +513,7 @@ function returnToRaces() {
 
 function passageCategories() {
   return [...new Set(data.passages.map((item) => item.category || "General"))].sort((a, b) => {
-    const preferred = { "Biblical Passages": 0, "Typing Basics": 1, "Typing Intermediate": 2, "Typing Advanced": 3, General: 4, "Movie Quotes": 5, Books: 6, "Lord of the Rings Quotes": 7 };
+    const preferred = { "Biblical Passages": 0, "Typing Basics": 1, "Typing Intermediate": 2, "Typing Advanced": 3, General: 4, "Harry Potter-Inspired": 5, Books: 6, "Lord of the Rings Quotes": 7 };
     return (preferred[a] ?? 10) - (preferred[b] ?? 10) || a.localeCompare(b);
   });
 }
@@ -716,31 +734,8 @@ function startIntroRace(name) {
   if (data.profile.name) saveActivePlayerProfile(data.profile.name);
   data.profile.name = requestedName;
   loadActiveProfileLibrary(requestedName);
-  const passage = quickIntroPassage();
-  const track = randomChoice(manifest.tracks) || manifest.tracks[0];
-  championship = {
-    id: `quick-intro-${Date.now()}`,
-    playerName: requestedName,
-    totalRaces: 1,
-    totalLevels: 1,
-    level: 1,
-    order: "quick",
-    mode: "adaptive",
-    difficulty: "normal",
-    passageIds: [passage.id],
-    trackIds: [track?.id].filter(Boolean),
-    aiBaselineWpm: data.profile.calibration?.wpm || 35,
-    rounds: [],
-    quickIntro: true,
-    quickPassage: passage,
-  };
-  data.activeChampionship = null;
-  reviewingCompletedLevel = false;
-  selectedReviewResult = null;
-  replayingCompletedRace = null;
-  quickIntroResult = null;
   persist();
-  startRace();
+  startCalibration();
 }
 
 function renderQuickRaceResult(result) {
@@ -860,6 +855,7 @@ function startChampionship({ skipReplayCharge = false } = {}) {
     aiBaselineWpm: Number(progress.aiBaselineWpm) || data.profile.calibration?.wpm || 35,
     rounds: [],
   };
+  data.profile.startHintSeen = true;
   data.activeChampionship = championship;
   persist();
   startRace();
@@ -901,6 +897,7 @@ function startRace({ roundNumberOverride = null } = {}) {
   $("#raceTyping").setAttribute("aria-disabled", "true");
   showScreen("race");
   raceActive = true; racePausedAt = null;
+  audio.playMusic({ restart: true });
   raceCountdownEnd = performance.now() + 3000;
   raceStartTime = raceCountdownEnd;
   raceSession.startTime = raceStartTime;
@@ -941,6 +938,7 @@ function pauseRace(force = false) {
   if (!raceActive || currentScreen !== "race") return;
   if (racePausedAt === null) {
     racePausedAt = performance.now(); $("#pauseOverlay").classList.remove("hidden"); $("#raceHint").textContent = "Race paused";
+    audio.pauseMusic();
   } else if (!force) resumeRace();
 }
 
@@ -949,6 +947,7 @@ function resumeRace() {
   const pausedFor = performance.now() - racePausedAt;
   raceStartTime += pausedFor; raceCountdownEnd += pausedFor; raceSession.startTime += pausedFor;
   racePausedAt = null; $("#pauseOverlay").classList.add("hidden"); $("#raceHint").textContent = raceTypingInstruction(); $("#raceTyping").focus();
+  audio.playMusic();
 }
 
 function debugFinishRaceFirst() {
@@ -979,7 +978,7 @@ function debugFinishRaceFirst() {
 }
 
 function finishRace(now, { forcePlayerFirst = false } = {}) {
-  raceActive = false; cancelAnimationFrame(raceFrame); audio.play("finish");
+  raceActive = false; cancelAnimationFrame(raceFrame); audio.pauseMusic({ reset: true }); audio.play("finish");
   const time = raceSession.elapsed(now);
   if (!forcePlayerFirst) raceRacers.forEach((racer) => updateAi(racer, time, raceSession.text.length));
   const finishOrder = rankRace(racePlayer, raceRacers, time);
@@ -1096,7 +1095,7 @@ async function syncLeaderboardResult(result) {
     onlineLeaderboardError = "";
     return true;
   } catch (error) {
-    onlineLeaderboardError = "Online leaderboard save failed. This score is still saved on this browser.";
+    onlineLeaderboardError = "Showing scores saved on this browser.";
     console.warn(error);
     return false;
   }
@@ -1107,7 +1106,7 @@ async function refreshOnlineLeaderboard() {
     onlineLeaderboardRows = await fetchOnlineLeaderboard();
     onlineLeaderboardError = "";
   } catch (error) {
-    onlineLeaderboardError = "Online leaderboard load failed. Showing scores saved on this browser.";
+    onlineLeaderboardError = "Showing scores saved on this browser.";
     console.warn(error);
   }
 }
@@ -1171,9 +1170,7 @@ function renderMistakeStats(result, scope = "race") {
   $("#mistakeContexts").innerHTML = mistakes.length ? mistakes.slice(0, 20).map((mistake) => `<div><code>${escapeHtml(mistakeContext(mistake, result))}</code><span>Race ${mistake.roundNumber || result.roundNumber || 1} - ${escapeHtml(mistake.passageTitle || result.passageTitle || "Passage")} - pressed <kbd>${escapeHtml(keyLabel(mistake.typed))}</kbd> at ${mistake.time.toFixed(1)}s</span></div>`).join("") + (mistakes.length > 20 ? `<small>Showing the first 20 of ${mistakes.length} mistakes.</small>` : "") : `<p class="mistake-empty">Nothing to review - excellent accuracy.</p>`;
 }
 
-function saveDashboardProfile(event) {
-  event.preventDefault();
-  const name = $("#dashboardPlayerName").value.trim();
+function commitDashboardProfile(name, { toastMessage = true } = {}) {
   if (!name) return;
   const previousName = data.profile.name;
   if (previousName && profileKey(previousName) !== profileKey(name)) saveActiveProfileLibrary(previousName);
@@ -1184,16 +1181,77 @@ function saveDashboardProfile(event) {
   $("#dashboardName").textContent = name;
   persist();
   showDashboard();
-  toast(`Player saved: ${name}`);
+  if (toastMessage) toast(`Player saved: ${name}`);
 }
 
-function loadDashboardProfile() {
-  const name = $("#dashboardPlayerName").value.trim();
-  if (!name) return;
+function saveDashboardProfile(event) { event.preventDefault(); commitDashboardProfile($("#dashboardPlayerName").value.trim()); }
+
+function loadDashboardProfile() { openProfilePicker(); }
+
+function savedPlayerProfiles() {
+  return Object.values(data.playerProfiles || {})
+    .filter((profile) => String(profile?.profile?.name || "").trim())
+    .map((profile) => ({
+      name: String(profile.profile.name).trim(),
+      key: profileKey(profile.profile.name),
+      calibration: profile.profile.calibration || null,
+      updatedAt: profile.profile.calibration?.date || profile.progression?.updatedAt || "",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function renderProfilePicker() {
+  const names = savedPlayerProfiles();
+  $("#playerPickerSummary").textContent = names.length ? `Choose a saved player below, or type a new name to create one.` : `No saved players yet. Type a name below to create the first one.`;
+  $("#playerPickerList").innerHTML = names.length ? names.map((player) => {
+    const calibration = player.calibration ? `${Math.round(player.calibration.wpm || 0)} WPM` : "No calibration yet";
+    return `<div class="player-picker-row"><div><strong>${escapeHtml(player.name)}</strong><small>${escapeHtml(calibration)}</small></div><div class="player-picker-row-actions"><button class="secondary compact" data-action="select-profile" data-profile-name="${escapeHtml(player.name)}">Load</button><button class="danger compact" data-action="delete-profile" data-profile-name="${escapeHtml(player.name)}">Delete</button></div></div>`;
+  }).join("") : `<p class="player-picker-empty">Enter a player name above, then save it to create a local profile.</p>`;
+}
+
+function openProfilePicker() {
+  $("#playerPickerInput").value = $("#dashboardPlayerName").value.trim() || data.profile.name || "";
+  renderProfilePicker();
+  $("#playerPickerDialog").showModal();
+  setTimeout(() => $("#playerPickerInput").focus(), 0);
+}
+
+function closeProfilePicker() {
+  $("#playerPickerDialog").close();
+}
+
+function saveProfileFromPicker() {
+  const name = $("#playerPickerInput").value.trim();
+  if (!name) { toast("Enter a player name first."); return; }
+  $("#dashboardPlayerName").value = name;
+  commitDashboardProfile(name);
+  closeProfilePicker();
+}
+
+function selectProfileFromPicker(name) {
   if (!loadPlayerProfile(name)) { toast(`No saved profile named ${name}.`); return; }
   persist();
   showDashboard();
+  closeProfilePicker();
   toast(`Loaded ${name}'s profile.`);
+}
+
+function deleteProfileFromPicker(name) {
+  const requestedName = String(name || "").trim();
+  if (!requestedName) return;
+  const key = profileKey(requestedName);
+  delete data.playerProfiles?.[key];
+  delete data.profileLibraries?.[key];
+  if (profileKey(data.profile.name) === key) {
+    data.profile.name = "";
+    data.profile.calibration = null;
+  }
+  persist();
+  renderProfilePicker();
+  renderGlobalNavigation();
+  renderCharacters();
+  renderPassageList();
+  toast(`Deleted ${requestedName}.`);
 }
 
 function showLastResults({ historyMode = "push" } = {}) {
@@ -1418,12 +1476,24 @@ function applySettings() {
   $("meta[name='theme-color']").content = theme.themeColor;
   document.body.classList.toggle("high-contrast", data.settings.highContrast);
   document.body.classList.toggle("reduced-motion", data.settings.reducedMotion);
-  $("#contrastButton").setAttribute("aria-pressed", String(data.settings.highContrast)); $("#motionButton").setAttribute("aria-pressed", String(data.settings.reducedMotion)); $("#soundButton").setAttribute("aria-pressed", String(data.settings.muted));
+  $("#contrastButton").setAttribute("aria-pressed", String(data.settings.highContrast));
+  $("#motionButton").setAttribute("aria-pressed", String(data.settings.reducedMotion));
+  $("#soundButton").setAttribute("aria-pressed", String(data.settings.musicEnabled));
+  $("#soundButton").setAttribute("aria-label", data.settings.musicEnabled ? "Turn race music off" : "Turn race music on");
+  $("#soundButton").title = data.settings.musicEnabled ? "Turn race music off" : "Turn race music on";
+  $("#keyNoiseSelect").value = data.settings.keyNoise === false ? "disabled" : "enabled";
   if (renderer) renderer.reducedMotion = data.settings.reducedMotion;
-  if (audio) audio.setMuted(data.settings.muted);
+  if (audio) { audio.setKeyNoise(data.settings.keyNoise !== false); audio.setMusicEnabled(data.settings.musicEnabled !== false); }
 }
 
 function toggleSetting(key) { data.settings[key] = !data.settings[key]; persist(); applySettings(); }
+function toggleMusic() {
+  data.settings.musicEnabled = !data.settings.musicEnabled;
+  persist(); applySettings();
+  if (data.settings.musicEnabled && (currentScreen === "calibration" || (currentScreen === "race" && raceActive && racePausedAt === null))) audio.playMusic();
+  else audio.pauseMusic();
+  toast(`Music ${data.settings.musicEnabled ? "on" : "off"}.`);
+}
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1800); }
 
 function handleTypingKey(event) {
@@ -1454,11 +1524,14 @@ function bindEvents() {
   $("#passageText").addEventListener("input", () => $("#passageLength").textContent = `${normalizeText($("#passageText").value).length} characters`);
   $("#importFile").addEventListener("change", async (event) => { const file = event.target.files[0]; if (!file) return; try { const incoming = importPassages(await file.text()); const map = new Map(data.passages.map((item) => [item.id, item])); incoming.forEach((item) => map.set(item.id, item)); data.passages = [...map.values()]; selectedPassageCategory = incoming[0].category || selectedPassageCategory; selectedPassageId = incoming[0].id; persist(); renderPassageGroupControl(); editPassage(incoming[0].id); toast(`Imported ${incoming.length} passage${incoming.length === 1 ? "" : "s"} into ${selectedPassageCategory}.`); } catch (error) { toast(error.message); } event.target.value = ""; });
   document.addEventListener("keydown", handleTypingKey);
-  window.addEventListener("blur", () => { if (raceActive && racePausedAt === null) pauseRace(true); });
+  window.addEventListener("blur", () => { audio?.pauseMusic(); if (raceActive && racePausedAt === null) pauseRace(true); });
+  window.addEventListener("focus", () => { if (currentScreen === "calibration" || (currentScreen === "race" && raceActive && racePausedAt === null)) audio?.playMusic(); });
   window.addEventListener("popstate", (event) => restoreScreenFromHistory(event.state?.screen || screenFromHash() || (data.profile.calibration ? "dashboard" : "welcome")));
   document.addEventListener("click", (event) => {
     const action = event.target.closest("[data-action]")?.dataset.action;
     if (action === "home") home();
+    if (action === "race-controls") openRaceControls();
+    if (action === "welcome") showScreen("welcome");
     if (action === "finish-screen") showFinishScreen();
     if (action === "library") showLibrary();
     if (action === "cancel-test") data.profile.calibration ? showDashboard() : showScreen("welcome");
@@ -1483,6 +1556,8 @@ function bindEvents() {
     if (action === "last-results") showLastResults();
     if (action === "return-from-results") returnFromResults();
     if (action === "load-profile") loadDashboardProfile();
+    if (action === "close-profile-picker") closeProfilePicker();
+    if (action === "save-profile-from-picker") saveProfileFromPicker();
     if (action === "open-leaderboard") { void renderLeaderboard(); $("#leaderboardDialog").showModal(); }
     if (action === "close-leaderboard") $("#leaderboardDialog").close();
     if (action === "open-mistakes") { renderMistakeStats(mistakeReviewResult || lastRaceResult, mistakeScope); $("#mistakeDialog").showModal(); }
@@ -1497,6 +1572,8 @@ function bindEvents() {
     const level = Number(event.target.closest("[data-level]")?.dataset.level); if (level) selectChampionshipLevel(level);
     const seriesResult = event.target.closest("[data-series-result]")?.dataset.seriesResult; if (seriesResult) showSeriesResult(seriesResult);
     const character = event.target.closest("[data-character]")?.dataset.character; if (character) { previewCharacterId = character; renderCharacters(); }
+    const profileName = event.target.closest("[data-profile-name]")?.dataset.profileName; if (profileName && action === "select-profile") selectProfileFromPicker(profileName);
+    if (profileName && action === "delete-profile") deleteProfileFromPicker(profileName);
     const passageOrder = event.target.closest("[data-passage-order]")?.dataset.passageOrder; if (passageOrder) selectPassageOrder(passageOrder);
     const toggleSection = event.target.closest("[data-toggle-section]")?.dataset.toggleSection; if (toggleSection) togglePassageSection(toggleSection);
     const edit = event.target.closest("[data-edit-passage]")?.dataset.editPassage; if (edit && !event.target.closest("button")) editPassage(edit);
@@ -1512,9 +1589,10 @@ function bindEvents() {
   $("#aiPaceSlider").addEventListener("change", (event) => setAiPace(event.target.value, true));
   $("#contrastButton").addEventListener("click", () => toggleSetting("highContrast"));
   $("#motionButton").addEventListener("click", () => toggleSetting("reducedMotion"));
-  $("#soundButton").addEventListener("click", () => toggleSetting("muted"));
+  $("#soundButton").addEventListener("click", toggleMusic);
   $("#passageGroupSelect").addEventListener("change", (event) => selectPassageCategory(event.target.value));
   $("#focusKeyHelperSelect").addEventListener("change", (event) => { data.settings.focusKeyHelper = event.target.value !== "disabled"; persist(); renderAiPaceControl(); toast(`Missed-key helper ${data.settings.focusKeyHelper ? "enabled" : "disabled"}.`); });
+  $("#keyNoiseSelect").addEventListener("change", (event) => { data.settings.keyNoise = event.target.value !== "disabled"; audio.setKeyNoise(data.settings.keyNoise); persist(); toast(`Key noise ${data.settings.keyNoise ? "on" : "off"}.`); });
   $("#themeSelect").addEventListener("change", (event) => {
     data.settings.theme = event.target.value;
     persist();

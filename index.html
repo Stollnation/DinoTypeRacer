@@ -11,31 +11,38 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <button class="wordmark" data-action="home" aria-label="Dino Type Racer home">
-          <span class="wordmark-icon">DR</span>
-          <span><strong data-game-title>Dino Type Racer</strong><small>Find your pace. Beat it.</small></span>
-        </button>
+        <div class="topbar-brand-group">
+          <button class="wordmark" data-action="race-controls" aria-label="Open Dino Type Racer race controls">
+            <span class="wordmark-icon">DR</span>
+            <span><strong data-game-title>Dino Type Racer</strong><small>Find your pace. Beat it.</small></span>
+          </button>
+          <a class="topbar-donate" href="https://buy.stripe.com/cNicN6gG83J179M3lAcs800" target="_blank" rel="noopener noreferrer" aria-label="Donate to support Dino Type Racer through Stripe">Donate</a>
+        </div>
         <div class="topbar-actions">
           <label class="theme-picker" for="themeSelect"><span>Colors</span><select id="themeSelect" aria-label="Color scheme"></select></label>
           <button class="text-button" data-action="library">Passages</button>
           <button class="icon-button" id="contrastButton" aria-pressed="false" title="High contrast">Aa</button>
           <button class="icon-button" id="motionButton" aria-pressed="false" title="Reduce motion">~</button>
-          <button class="icon-button" id="soundButton" aria-pressed="false" title="Mute sound">&#9834;</button>
+          <button class="icon-button" id="soundButton" aria-pressed="true" aria-label="Turn race music off" title="Turn race music off">&#9834;</button>
         </div>
       </header>
+      <audio id="musicTrack" loop preload="auto" playsinline>
+        <source src="assets/audio/dino-racer-beats-loop.ogg" type="audio/ogg" />
+        <source src="assets/audio/dino-racer-beats-loop.mp3" type="audio/mpeg" />
+      </audio>
 
       <main>
         <section class="screen hero-screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
           <div class="hero-copy">
             <p class="eyebrow">Quick dino typing race</p>
             <h1 id="welcomeTitle">Jump in.<br />Race first.</h1>
-            <p class="hero-deck">Enter your racer name and run one fast dino typing race. Your result becomes your starting pace, then you can continue into the full challenge map.</p>
+            <p class="hero-deck">Enter your racer name and start the calibration test. Your saved pace and profile carry into the ready screen and full challenge map.</p>
             <form id="profileForm" class="name-form">
               <label for="playerName">Racer name</label>
-              <div class="input-action"><input id="playerName" name="racerName" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Enter your name" required /><button class="primary" type="submit">Start quick race <span>&rarr;</span></button></div>
+              <div class="input-action"><input id="playerName" name="racerName" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Enter your name" required /><button class="primary" type="submit">Start calibration <span>&rarr;</span></button></div>
               <small class="save-scope-note">Scores can sync online. Your profile saves on this browser.</small>
             </form>
-            <button class="text-button welcome-leaderboard-button" data-action="open-leaderboard">View quick race leaderboard</button>
+            <div class="welcome-actions"><button class="secondary compact" data-action="load-profile">Load saved player</button><button class="text-button welcome-leaderboard-button" data-action="open-leaderboard">View leaderboard</button></div>
           </div>
           <div class="hero-art" aria-hidden="true">
             <div class="sun"></div>
@@ -68,15 +75,21 @@
         </section>
 
         <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="dashboard-head">
-            <div><p class="eyebrow">Race control</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace. Progress saves on this browser.</p><form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" name="dashboardRacerName" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Load</button></form></div>
-            <div class="baseline-card"><span>Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button" data-action="open-leaderboard">Leaderboard</button></div>
+            <div class="baseline-card calibration-card">
+              <span class="calibration-step-badge" aria-hidden="true">1</span>
+              <div class="calibration-card-content"><span class="calibration-label">Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><div class="calibration-card-actions"><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button" data-action="open-leaderboard">Leaderboard</button></div></div>
+            </div>
+            <div class="ready-panel">
+              <div class="ready-intro"><p class="eyebrow">Ready</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace. Progress saves on this browser.</p></div>
+              <form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" name="dashboardRacerName" type="text" maxlength="24" size="22" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Load</button><span class="ready-profile-divider" aria-hidden="true"></span><button class="secondary compact" type="button" data-action="home">Home</button><button class="secondary compact" type="button" data-action="finish-screen">Finish screen</button></form>
+              <div class="ready-secondary-actions"><button class="text-button restart-setup-button" data-action="welcome">Back to welcome</button><a class="secondary compact support-email-link" href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Support</a></div>
+            </div>
           </div>
 
           <div class="setup-grid race-controls-grid">
             <div class="setup-panel">
-              <div class="panel-title"><span>01</span><div><h3>Game options</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div>
+              <div class="panel-title"><span>2</span><div><h3>Game Settings</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div>
               <div class="ai-pace-control">
                 <div class="ai-pace-readout"><div><span>Computer difficulty</span><strong id="aiPaceDescription">Matched</strong></div><output id="aiPaceValue" for="aiPaceSlider">0%</output></div>
                 <input id="aiPaceSlider" type="range" min="-20" max="20" step="1" value="0" aria-label="Computer pace adjustment percentage" />
@@ -87,11 +100,11 @@
                   <button class="calibration-mode selected" data-race-mode="strict" role="radio" aria-checked="true"><strong>Strict</strong><span>Fix mistakes with Backspace</span></button>
                   <button class="calibration-mode" data-race-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving and mark misses red</span></button>
                 </div>
-                <label class="helper-toggle">Missed-key helper<select id="focusKeyHelperSelect" aria-label="Missed-key helper"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
+                <div class="helper-audio-controls"><label class="helper-toggle">Missed-key helper<select id="focusKeyHelperSelect" aria-label="Missed-key helper"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label><label class="helper-toggle">Key Noise<select id="keyNoiseSelect" aria-label="Key Noise"><option value="enabled">On</option><option value="disabled">Off</option></select></label></div>
               </div>
             </div>
             <div class="setup-panel runner-control-panel">
-              <div class="panel-title"><span>02</span><div><h3>Choose your runner</h3><p>Your selection is saved with this player.</p></div></div>
+              <div class="panel-title"><span>3</span><div><h3>Choose your Racer</h3><p>Your selection is saved with this player.</p></div></div>
               <div class="runner-summary" id="selectedRunnerPreview"></div>
               <p class="runner-note">More runner options will appear here automatically when they are added to the character manifest.</p>
             </div>
@@ -101,10 +114,10 @@
             <div class="level-buttons" id="levelButtons" aria-label="Championship levels"></div>
             <div class="replay-rules"><label>Allowed replays per level <input id="replayLimit" type="number" min="0" max="20" step="1" value="2" /></label><label class="check-label"><input id="replayGlobal" type="checkbox" /> Override per level to per Game</label><button class="danger compact" type="button" data-action="reset-all-races">Reset all races</button><span id="replayAllowanceStatus">2 replays available for this level</span></div>
           </section>
-          <div class="launch-bar"><div><span>Challenge group</span><label class="passage-group-picker">Passages <select id="passageGroupSelect" aria-label="Passage group"></select></label><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong><button class="inline-button" data-action="library">View passages</button></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="secondary compact hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start five races <span>&rarr;</span></button></div></div>        </section>
+          <div class="launch-bar"><div><span class="launch-step-badge" aria-hidden="true">4</span><div class="passage-picker-block"><div class="passage-picker-heading"><label for="passageGroupSelect">Passages</label><button class="inline-button" data-action="library">Change passages</button></div><select id="passageGroupSelect" aria-label="Passage group"></select></div><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="secondary compact hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start Level 1 <span>&rarr;</span></button></div></div>        </section>
 
         <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
+          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="race-controls">Race Controls</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="race-topline">
             <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
             <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="pause">Pause</button></div>
@@ -158,6 +171,17 @@
           <h3 id="leaderboardDialogTitle">Leaderboard</h3>
           <p id="leaderboardSummary" class="leaderboard-summary"></p>
           <div class="leaderboard-table" id="leaderboardTable"></div>
+        </dialog>
+        <dialog id="playerPickerDialog" class="player-picker-dialog" aria-labelledby="playerPickerTitle">
+          <button class="dialog-close" data-action="close-profile-picker" aria-label="Close player picker">&times;</button>
+          <p class="eyebrow">Saved players</p>
+          <h3 id="playerPickerTitle">Choose a player</h3>
+          <p class="player-picker-summary" id="playerPickerSummary"></p>
+          <div class="player-picker-actions">
+            <input id="playerPickerInput" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Enter a new player name" />
+            <button class="primary compact" data-action="save-profile-from-picker">Save / switch</button>
+          </div>
+          <div id="playerPickerList" class="player-picker-list"></div>
         </dialog>
         <dialog id="resetRacesDialog" class="confirm-dialog" aria-labelledby="resetRacesTitle">
           <button class="dialog-close" data-action="close-reset-races" aria-label="Close reset dialog">&times;</button>

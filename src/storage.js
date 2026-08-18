@@ -6,7 +6,7 @@ export function defaultState() {
     profile: { name: "", characterId: "nova", calibration: null },
     playerProfiles: {},
     profileLibraries: {},
-    settings: { muted: false, reducedMotion: false, highContrast: false, aiPaceOffset: 0, theme: "sunset-sprint", focusKeyHelper: true, raceTypingMode: "strict" },
+    settings: { musicEnabled: true, keyNoise: true, reducedMotion: false, highContrast: false, aiPaceOffset: 0, theme: "pumpkin-coast", focusKeyHelper: true, raceTypingMode: "strict" },
     passages: structuredClone(STARTER_PASSAGES),
     selectedPassageCategory: "Biblical Passages",
     collapsedPassageSections: {},
@@ -20,13 +20,17 @@ export function loadState(storage = localStorage) {
   try {
     const saved = JSON.parse(storage.getItem(CONFIG.storageKey));
     if (!saved || saved.version !== 1) return fallback;
+    const settings = { ...fallback.settings, ...(saved.settings || {}) };
+    if (saved.settings?.musicEnabled === undefined && saved.settings?.muted !== undefined) settings.musicEnabled = !saved.settings.muted;
+    if (saved.settings?.keyNoise === undefined && saved.settings?.muted !== undefined) settings.keyNoise = !saved.settings.muted;
+    delete settings.muted;
     return {
       ...fallback,
       ...saved,
       profile: { ...fallback.profile, ...(saved.profile || {}) },
       playerProfiles: saved.playerProfiles && typeof saved.playerProfiles === "object" ? saved.playerProfiles : {},
       profileLibraries: saved.profileLibraries && typeof saved.profileLibraries === "object" ? saved.profileLibraries : {},
-      settings: { ...fallback.settings, ...(saved.settings || {}) },
+      settings,
       passages: (Array.isArray(saved.passages) && saved.passages.length ? saved.passages : fallback.passages).map((passage) => ({ ...passage, category: passage.category || "General" })),
       selectedPassageCategory: saved.selectedPassageCategory || fallback.selectedPassageCategory,
       collapsedPassageSections: saved.collapsedPassageSections && typeof saved.collapsedPassageSections === "object" ? saved.collapsedPassageSections : {},

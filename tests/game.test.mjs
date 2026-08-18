@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { TypingSession, ordinal } from "../src/typing.js";
 import { createAiRacers, updateAi } from "../src/ai.js";
-import { exportPassages, importPassages, normalizeText, validatePassage } from "../src/passages.js";
+import { exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "../src/passages.js";
 import { defaultState, loadState, saveState } from "../src/storage.js";
 import { CHAMPIONSHIP_RACES, championshipStandings, rankRace } from "../src/championship.js";
 import { CONFIG, THEMES, STARTER_PASSAGES } from "../src/config.js";
@@ -24,24 +24,52 @@ test("screen navigation exposes home, finish, and browser history controls", () 
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
   assert.equal((html.match(/data-action="finish-screen"/g) || []).length, 6);
-  assert.equal((html.match(/global-screen-nav/g) || []).length, 6);
+  assert.equal((html.match(/global-screen-nav/g) || []).length, 5);
+  assert.match(html, /ready-profile[\s\S]*data-action="home"[\s\S]*data-action="finish-screen"/);
+  assert.match(html, /class="wordmark" data-action="race-controls"/);
+  assert.match(html, /id="raceScreen"[\s\S]*data-action="race-controls">Race Controls<[\s\S]*data-action="finish-screen">Finish screen</);
+  assert.match(app, /function openRaceControls/);
   assert.match(app, /history\.pushState/);
   assert.match(app, /history\.replaceState/);
   assert.match(app, /window\.addEventListener\("popstate"/);
   assert.match(app, /function restoreScreenFromHistory/);
   assert.match(css, /\.screen-nav/);
 });
+test("Ready support email and Stripe donation link are safe", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(html, /href="mailto:JonIstoll@hotmail\.com\?subject=Dino%20Type%20Racer%20support"/);
+  assert.match(html, /class="topbar-donate"[^>]*href="https:\/\/buy\.stripe\.com\/cNicN6gG83J179M3lAcs800"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+  assert.doesNotMatch(html, /sk_(?:test|live)_/);
+});
+test("race music and key noise have separate controls", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+  const audio = readFileSync(new URL("../src/audio.js", import.meta.url), "utf8");
+  const state = defaultState();
+  assert.equal(state.settings.musicEnabled, true);
+  assert.equal(state.settings.keyNoise, true);
+  assert.match(html, /id="keyNoiseSelect"/);
+  assert.match(html, /id="musicTrack"[\s\S]*dino-racer-beats-loop\.ogg[\s\S]*dino-racer-beats-loop\.mp3/);
+  assert.match(app, /audio\.playMusic/);
+  assert.match(app, /audio\.pauseMusic/);
+  assert.match(audio, /kind === "key" \|\| kind === "error"/);
+});
+test("leaderboard fallback uses calm browser-only wording", () => {
+  const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+  assert.doesNotMatch(app, /Online leaderboard (?:save|load) failed/);
+  assert.match(app, /Showing scores saved on this browser\./);
+});
 test("flow mode counts mistakes without blocking progress", () => { const session = new TypingSession("abc", { ignoreMistakes: true }); session.type("x", 0); assert.equal(session.index, 1); assert.equal(session.errorChar, ""); assert.equal(session.errors, 1); session.type("b", 1000); assert.equal(session.index, 2); assert.equal(session.correctKeystrokes, 1); });
 test("WPM and accuracy follow the specification", () => { const session = new TypingSession("hello"); "hello".split("").forEach((char, i) => session.type(char, i * 12000)); assert.equal(Math.round(session.wpm()), 1); assert.equal(session.accuracy, 1); });
 test("normalization handles smart punctuation and whitespace", () => assert.equal(normalizeText("  \u201cHello\u201d\n\u2014 friend\u2026  "), '"Hello" - friend...'));
 test("TXT passage import/export preserves sections and settings", () => { const passage = validatePassage({ id: "test", title: "Test", category: "Biblical Passages", source: "Test Source", text: "A valid passage needs enough useful characters to race.", enabled: false }); assert.deepEqual(importPassages(exportPassages([passage]))[0], passage); assert.throws(() => importPassages("{}")); });
 
-test("starter library includes full General and movie-style challenge groups", () => {
+test("starter library includes full courses and the supplied Harry Potter-inspired group", () => {
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Typing Basics").length, 50);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Typing Intermediate").length, 50);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Typing Advanced").length, 50);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "General").length, 50);
-  assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Movie Quotes").length, 50);
+  assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Movie Quotes").length, 0);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Books").length, 50);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Lord of the Rings Quotes").length, 50);
   assert.ok(STARTER_PASSAGES.filter((item) => item.category !== "General").every((item) => item.source));
@@ -51,8 +79,13 @@ test("starter library includes full General and movie-style challenge groups", (
   assert.match(beginner.at(-1).title, /Beginner Graduation/);
   assert.match(STARTER_PASSAGES.find((item) => item.id === "typing-intermediate-01").text, /Clean speed/);
   assert.match(STARTER_PASSAGES.find((item) => item.id === "typing-advanced-01").text, /Accuracy under pressure/);
-  assert.ok(STARTER_PASSAGES.filter((item) => item.category !== "Movie Quotes").every((item) => item.text.length >= 30));
-  assert.ok(STARTER_PASSAGES.filter((item) => item.category === "Movie Quotes").every((item) => item.text.length >= 5));
+  assert.ok(STARTER_PASSAGES.every((item) => item.text.length >= 30));
+  const inspired = importNumberedInspiredPassages(readFileSync(new URL("../assets/passages/harry-potter-inspired.txt", import.meta.url), "utf8"), { category: "Harry Potter-Inspired", idPrefix: "harry-potter" });
+  assert.equal(inspired.length, 50);
+  assert.ok(inspired.every((item) => item.category === "Harry Potter-Inspired" && item.source.includes("inspired")));
+  assert.match(inspired[0].title, /Harry - Sorcerer's Stone 01/);
+  assert.match(inspired.at(-1).title, /Harry - Deathly Hallows 50/);
+  assert.ok(inspired.every((item) => item.text.length >= 200));
 });
 
 test("plain TXT import uses the first line as a section and each following line as a passage", () => {
@@ -318,7 +351,8 @@ test("Pixel uses the current generated source and never the Old folder", () => {
 test("Ready page exposes saved configuration-driven color schemes", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-  assert.equal(defaultState().settings.theme, "sunset-sprint");
+  assert.equal(defaultState().settings.theme, "pumpkin-coast");
+  assert.equal(defaultState().selectedPassageCategory, "Biblical Passages");
   assert.equal(CONFIG.calibrationTexts.length, 20);
   assert.match(html, /data-action="open-leaderboard"/);
   assert.ok(THEMES.some((theme) => theme.id === "stormy-teal"));
