@@ -1,9 +1,16 @@
+let sharedContext;
+export function getGameAudioContext() {
+  const AudioCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtor) return null;
+  if (!sharedContext || sharedContext.state === "closed") sharedContext = new AudioCtor();
+  return sharedContext;
+}
+
 export class GameAudio {
   constructor({ keyNoise = true, musicEnabled = true, musicElement = null } = {}) {
     this.keyNoise = keyNoise;
     this.musicEnabled = musicEnabled;
     this.music = musicElement;
-    this.context = null;
     if (this.music) { this.music.loop = true; this.music.volume = 0.28; }
   }
   setKeyNoise(value) { this.keyNoise = value; }
@@ -21,8 +28,9 @@ export class GameAudio {
   }
   play(kind) {
     if ((kind === "key" || kind === "error") && !this.keyNoise) return;
-    this.context ||= new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = this.context; const osc = ctx.createOscillator(); const gain = ctx.createGain(); const now = ctx.currentTime;
+    const ctx = getGameAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator(); const gain = ctx.createGain(); const now = ctx.currentTime;
     const frequencies = { key: 420, error: 145, start: 650, finish: 880, save: 520 };
     osc.type = kind === "error" ? "sawtooth" : "sine";
     osc.frequency.setValueAtTime(frequencies[kind] || 420, now);

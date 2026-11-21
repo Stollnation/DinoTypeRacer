@@ -7,8 +7,13 @@
     <meta name="description" content="Dino Type Racer is an original adaptive typing game with replaceable runners, tracks, and passages." />
     <title>Dino Type Racer</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="adventure.css" />
+    <link rel="stylesheet" href="src/classroom.css" />
+    <link rel="stylesheet" href="src/help.css" />
   </head>
   <body>
+    <div class="adventure-scenery" aria-hidden="true"></div>
+    <div class="adventure-foreground" aria-hidden="true"></div>
     <div class="app-shell">
       <header class="topbar">
         <div class="topbar-brand-group">
@@ -18,11 +23,12 @@
           </button>
           <a class="topbar-donate" href="https://buy.stripe.com/cNicN6gG83J179M3lAcs800" target="_blank" rel="noopener noreferrer" aria-label="Donate to support Dino Type Racer through Stripe">Donate</a>
         </div>
+        <div class="ready-banner"><span>Race setup</span><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2></div>
         <div class="topbar-actions">
           <label class="theme-picker" for="themeSelect"><span>Colors</span><select id="themeSelect" aria-label="Color scheme"></select></label>
-          <button class="text-button" data-action="library">Passages</button>
+          <button class="icon-button" id="helpButton" type="button" data-action="help" aria-label="Game help" title="Game help" disabled>?</button>
           <button class="icon-button" id="contrastButton" aria-pressed="false" title="High contrast">Aa</button>
-          <button class="icon-button" id="motionButton" aria-pressed="false" title="Reduce motion">~</button>
+          <button class="icon-button" id="motionButton" aria-pressed="false" aria-label="Reduce racer animation" title="Reduce racer animation">~</button>
           <button class="icon-button" id="soundButton" aria-pressed="true" aria-label="Turn race music off" title="Turn race music off">&#9834;</button>
         </div>
       </header>
@@ -32,28 +38,7 @@
       </audio>
 
       <main>
-        <section class="screen hero-screen active" id="welcomeScreen" aria-labelledby="welcomeTitle">
-          <div class="hero-copy">
-            <p class="eyebrow">Quick dino typing race</p>
-            <h1 id="welcomeTitle">Jump in.<br />Race first.</h1>
-            <p class="hero-deck">Enter your racer name and start the calibration test. Your saved pace and profile carry into the ready screen and full challenge map.</p>
-            <form id="profileForm" class="name-form">
-              <label for="playerName">Racer name</label>
-              <div class="input-action"><input id="playerName" name="racerName" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Enter your name" required /><button class="primary" type="submit">Start calibration <span>&rarr;</span></button></div>
-              <small class="save-scope-note">Scores can sync online. Your profile saves on this browser.</small>
-            </form>
-            <div class="welcome-actions"><button class="secondary compact" data-action="load-profile">Load saved player</button><button class="text-button welcome-leaderboard-button" data-action="open-leaderboard">View leaderboard</button></div>
-          </div>
-          <div class="hero-art" aria-hidden="true">
-            <div class="sun"></div>
-            <div class="speed-line line-one"></div><div class="speed-line line-two"></div><div class="speed-line line-three"></div>
-            <img src="assets/characters/nova/nova-run.png" alt="" />
-            <div class="hero-stat"><strong>4 rivals</strong><span>matched to your pace</span></div>
-          </div>
-        </section>
-
         <section class="screen test-screen" id="calibrationScreen" aria-labelledby="testTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="section-heading">
             <div><p class="eyebrow">First-run calibration</p><h2 id="testTitle">Set your starting pace</h2><p>Choose how mistakes behave, then type for 60 seconds.</p></div>
             <div class="timer-orb"><strong id="calibrationTimer">60</strong><span>seconds</span></div>
@@ -63,9 +48,9 @@
             <button class="calibration-mode" data-calibration-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving past mistakes</span></button>
           </div>
           <form id="manualPaceForm" class="manual-pace-form">
-            <div><strong>Already know your typing speed?</strong><span>Enter your usual WPM and skip the 60-second test.</span></div>
+            <div><strong>Know your speed?</strong><span>Enter your usual WPM and skip the 60-second test.</span></div>
             <label for="manualPaceWpm"><span>Starting pace</span><span class="manual-pace-input"><input id="manualPaceWpm" type="number" min="5" max="250" step="1" value="40" required /><b>WPM</b></span></label>
-            <button class="secondary compact" type="submit">Use this pace &amp; skip test</button>
+            <button class="primary" type="submit">Use this pace &amp; skip test</button>
           </form>
           <div class="typing-card focus-ring" id="calibrationTyping" tabindex="0" aria-label="Typing test. Start typing to begin.">
             <div class="typing-meta"><span id="calibrationHint">Starts on your first keystroke</span><span><strong id="calibrationWpm">0</strong> WPM</span></div>
@@ -76,35 +61,49 @@
 
         <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
           <div class="dashboard-head">
-            <div class="baseline-card calibration-card">
-              <span class="calibration-step-badge" aria-hidden="true">1</span>
-              <div class="calibration-card-content"><span class="calibration-label">Calibration</span><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small><div class="calibration-card-actions"><button class="inline-button" data-action="retest">Retake test</button><button class="inline-button" data-action="open-leaderboard">Leaderboard</button></div></div>
+            <div class="ready-player-card">
+              <form id="dashboardProfileForm" class="ready-profile" autocomplete="off"><span class="profile-step-badge" aria-hidden="true">1</span><label for="dashboardPlayerName">Racer nickname</label><input id="dashboardPlayerName" name="gameAliasReady" type="text" maxlength="24" size="22" autocomplete="section-game-ready nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Switch player</button><button type="button" id="joinDailyRace" class="secondary compact" hidden>Join race</button></form>
+              <div class="ready-secondary-actions"><span>Progress saves on this browser.</span><a class="support-email-link" href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Support</a></div>
             </div>
-            <div class="ready-panel">
-              <div class="ready-intro"><p class="eyebrow">Ready</p><h2 id="dashboardTitle">Ready, <span id="dashboardName">Racer</span>?</h2><p>Your rivals are tuned to your saved pace. Progress saves on this browser.</p></div>
-              <form id="dashboardProfileForm" class="ready-profile"><label for="dashboardPlayerName">Player name</label><input id="dashboardPlayerName" name="dashboardRacerName" type="text" maxlength="24" size="22" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Load</button><span class="ready-profile-divider" aria-hidden="true"></span><button class="secondary compact" type="button" data-action="home">Home</button><button class="secondary compact" type="button" data-action="finish-screen">Finish screen</button></form>
-              <div class="ready-secondary-actions"><button class="text-button restart-setup-button" data-action="welcome">Back to welcome</button><a class="secondary compact support-email-link" href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Support</a></div>
+            <div class="baseline-card calibration-card">
+              <span class="calibration-step-badge" aria-hidden="true">2</span>
+              <div class="calibration-card-content">
+                <div class="calibration-readout">
+                  <span class="calibration-label" id="startingPaceLabel">Your starting pace</span>
+                  <div class="calibration-metrics hidden" id="startingPaceMetrics"><strong><b id="baselineWpm">0</b> WPM</strong><small id="baselineAccuracy">0% accuracy</small></div>
+                </div>
+                <div class="calibration-card-actions">
+                  <button id="startingPaceButton" class="inline-button" data-action="set-starting-pace">Set starting pace</button>
+                  <button class="inline-button calibration-complete-only" data-action="retest">Retake test</button>
+                  <button class="inline-button calibration-complete-only" data-action="open-leaderboard">Leaderboard</button>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="setup-grid race-controls-grid">
             <div class="setup-panel">
-              <div class="panel-title"><span>2</span><div><h3>Game Settings</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div>
+              <div class="panel-title"><span>3</span><div><h3>Game Settings</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div>
               <div class="ai-pace-control">
+                <div class="pace-settings">
                 <div class="ai-pace-readout"><div><span>Computer difficulty</span><strong id="aiPaceDescription">Matched</strong></div><output id="aiPaceValue" for="aiPaceSlider">0%</output></div>
                 <input id="aiPaceSlider" type="range" min="-20" max="20" step="1" value="0" aria-label="Computer pace adjustment percentage" />
                 <div class="ai-pace-scale"><span>-20% easier</span><span>Matched</span><span>+20% faster</span></div>
                 <p id="aiPaceRange" class="ai-pace-range">Projected rivals: 0-0 WPM</p>
                 <small class="ai-pace-note">Calibration sets the starting point; this slider controls rival speed. Levels do not add a hidden boost.</small>
+                </div>
+                <div class="typing-settings">
                 <div class="race-modes" role="radiogroup" aria-label="Race typing mode">
                   <button class="calibration-mode selected" data-race-mode="strict" role="radio" aria-checked="true"><strong>Strict</strong><span>Fix mistakes with Backspace</span></button>
                   <button class="calibration-mode" data-race-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving and mark misses red</span></button>
                 </div>
                 <div class="helper-audio-controls"><label class="helper-toggle">Missed-key helper<select id="focusKeyHelperSelect" aria-label="Missed-key helper"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label><label class="helper-toggle">Key Noise<select id="keyNoiseSelect" aria-label="Key Noise"><option value="enabled">On</option><option value="disabled">Off</option></select></label></div>
+                </div>
+                <div class="settings-confirm-row hidden" id="settingsConfirmRow"><p>These choices can be changed later.</p><button class="primary compact" id="confirmGameSettingsButton" type="button" data-action="confirm-game-settings">OK — use these settings</button></div>
               </div>
             </div>
             <div class="setup-panel runner-control-panel">
-              <div class="panel-title"><span>3</span><div><h3>Choose your Racer</h3><p>Your selection is saved with this player.</p></div></div>
+              <div class="panel-title"><span>4</span><div><h3>Choose your Racer</h3><p>Your selection is saved with this player.</p></div></div>
               <div class="runner-summary" id="selectedRunnerPreview"></div>
               <p class="runner-note">More runner options will appear here automatically when they are added to the character manifest.</p>
             </div>
@@ -114,13 +113,27 @@
             <div class="level-buttons" id="levelButtons" aria-label="Championship levels"></div>
             <div class="replay-rules"><label>Allowed replays per level <input id="replayLimit" type="number" min="0" max="20" step="1" value="2" /></label><label class="check-label"><input id="replayGlobal" type="checkbox" /> Override per level to per Game</label><button class="danger compact" type="button" data-action="reset-all-races">Reset all races</button><span id="replayAllowanceStatus">2 replays available for this level</span></div>
           </section>
-          <div class="launch-bar"><div><span class="launch-step-badge" aria-hidden="true">4</span><div class="passage-picker-block"><div class="passage-picker-heading"><label for="passageGroupSelect">Passages</label><button class="inline-button" data-action="library">Change passages</button></div><select id="passageGroupSelect" aria-label="Passage group"></select></div><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="secondary compact hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start Level 1 <span>&rarr;</span></button></div></div>        </section>
+          <div class="launch-bar"><div><span class="launch-step-badge" aria-hidden="true">5</span><div class="passage-picker-block"><div class="passage-picker-heading"><label for="passageGroupSelect">Passages</label><button class="inline-button" data-action="library">Change passages</button></div><select id="passageGroupSelect" aria-label="Passage group"></select></div><strong id="selectedPassageTitle">Level 1 of 10 - five races</strong></div><div class="launch-actions"><button class="secondary large hidden" id="returnToRacesButton" data-action="return-to-races">Return to Races</button><button class="secondary compact hidden" id="lastResultsReadyButton" data-action="last-results">Last race results</button><button class="primary large" id="startChampionshipButton" data-action="start-race">Start Level 1 <span>&rarr;</span></button></div></div>
+
+          <details class="creator-studio-disclosure"><summary><span>Creator's camp</span><small>Make adventures · Create a racer · Explore your Typing DNA</small><b aria-hidden="true">+</b></summary><section class="creator-studio-strip" aria-labelledby="creatorStudioTitle">
+            <div class="creator-studio-intro"><span>Free Creator’s Camp preview</span><h3 id="creatorStudioTitle">Make this race yours</h3><p>Build an adventure, bring your own racer, and turn weak keys into dinosaur rivals.</p></div>
+            <div class="studio-tool"><button data-action="creator"><span class="camp-tool-label">Build a race series</span><b>Campaign Forge</b><small id="activeCampaignSummary">Build a 50-race adventure</small></button><button class="studio-play" data-action="play-active-campaign">Play</button></div>
+            <button class="studio-tool" data-action="racer-workshop"><span class="camp-tool-label">Use your artwork</span><b>Custom Racer</b><small id="customRacerSummary">Upload family artwork</small></button>
+            <button class="studio-tool" data-action="typing-dna"><span class="camp-tool-label">See what to practice</span><b>Typing DNA</b><small id="nemesisSummary">See strengths and Nemeses</small></button>
+            <span id="familyProfileSummary" class="hidden"></span>
+          </section>
+          <section class="browser-transfer" id="dailyTeacherEntry" hidden><div><h3>Race of the Day</h3><p>Pick a passage and a dino roster, then start a race with a room code. Free local preview.</p></div><button class="primary compact" type="button" id="hostDailyRace">Host a race</button></section>
+          <section class="browser-transfer" aria-labelledby="transferTitle">
+            <div><h3 id="transferTitle">Move to another computer</h3><p>Export all players, saved races, passages, campaigns, and racer artwork in one private file. Nothing is uploaded.</p></div>
+            <div class="transfer-actions"><button type="button" class="secondary compact" id="exportBrowserSave">Export backup</button><button type="button" class="secondary compact" id="importBrowserSave">Import backup</button><input type="file" id="browserBackupFile" accept=".dinobackup" hidden></div>
+            <small id="backupStatus" role="status"></small>
+          </section></details>
+        </section>
 
         <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="race-controls">Race Controls</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <div class="race-topline">
             <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
-            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="pause">Pause</button></div>
+            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="race-controls">Race setup</button><button class="secondary compact" data-action="pause">Pause</button><button class="secondary compact race-help-button" id="raceHelpButton" type="button" data-action="help" aria-label="Game help" title="Pause and open Game Help">?</button></div>
           </div>
           <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="quick-result-overlay hidden" id="quickResultOverlay"><div><p class="eyebrow">Quick race complete</p><h3 id="quickResultTitle">Nice run!</h3><p id="quickResultSummary"></p><div class="quick-result-grid"><span><b id="quickResultWpm">0</b> WPM</span><span><b id="quickResultAccuracy">100%</b> accuracy</span><span><b id="quickResultPlace">1st</b> place</span></div><p class="quick-sync-status" id="quickLeaderboardStatus">Saving leaderboard score...</p><div class="quick-result-actions"><button class="secondary" data-action="open-leaderboard">Leaderboard</button><button class="primary" data-action="continue-after-quick-race">Continue to races</button></div></div></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><!-- QA shortcut, if needed again: <button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button> --></div></div></div>
           <div class="typing-card race-typing focus-ring" id="raceTyping" tabindex="0" aria-label="Race typing area">
@@ -130,7 +143,6 @@
         </section>
 
         <section class="screen results-screen" id="resultsScreen" aria-labelledby="resultsTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <p class="eyebrow" id="resultRaceLabel">Race 1 complete</p>
           <h2 id="resultsTitle">1st Place</h2>
           <p class="results-summary" id="resultsSummary"></p><div class="perfect-result-badge hidden" id="perfectResultBadge">Perfect!</div>
@@ -142,7 +154,7 @@
             <aside class="standings-panel"><span>Level points</span><div class="series-standings" id="seriesStandings"></div></aside>
           </div>
           <div class="replay-usage" id="replayUsage" aria-live="polite"></div>
-          <div class="results-actions"><button class="primary hidden" id="returnFromResultsButton" data-action="return-from-results">Return to race</button><button class="secondary" id="mistakeStatsButton" data-action="open-mistakes">Mistake Stats</button><button class="secondary" id="leaderboardButton" data-action="open-leaderboard">Leaderboard</button><button class="secondary" id="retryRaceButton" data-action="retry-race">Retry race</button><button class="secondary hidden" id="viewPodiumButton" data-action="view-podium">View Podium</button><button class="primary" id="nextRaceButton" data-action="next-race">Next race</button><button class="secondary" id="resultsDashboardButton" data-action="dashboard">Race control</button></div>
+          <div class="results-actions"><button class="primary hidden" id="returnFromResultsButton" data-action="return-from-results">Return to race</button><button class="secondary" id="mistakeStatsButton" data-action="open-mistakes">Mistake Stats</button><button class="secondary" id="leaderboardButton" data-action="open-leaderboard">Leaderboard</button><button class="secondary" id="retryRaceButton" data-action="retry-race">Retry race</button><button class="secondary hidden" id="viewPodiumButton" data-action="view-podium">View Podium</button><button class="primary" id="nextRaceButton" data-action="next-race">Next race</button><button class="secondary" id="resultsDashboardButton" data-action="dashboard">Race setup</button></div>
         </section>
 
         <dialog id="runnerDialog" class="runner-dialog" aria-labelledby="runnerDialogTitle">
@@ -178,7 +190,7 @@
           <h3 id="playerPickerTitle">Choose a player</h3>
           <p class="player-picker-summary" id="playerPickerSummary"></p>
           <div class="player-picker-actions">
-            <input id="playerPickerInput" type="text" maxlength="24" autocomplete="off" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Enter a new player name" />
+            <input id="playerPickerInput" name="gameAliasPicker" type="text" maxlength="24" autocomplete="section-game-picker nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text" autocapitalize="words" spellcheck="false" placeholder="Choose a racer nickname" aria-label="New racer nickname" />
             <button class="primary compact" data-action="save-profile-from-picker">Save / switch</button>
           </div>
           <div id="playerPickerList" class="player-picker-list"></div>
@@ -190,9 +202,13 @@
           <p>This will delete all the races for these passages.</p>
           <div class="dialog-actions"><button class="secondary" data-action="close-reset-races">Cancel</button><button class="danger" data-action="confirm-reset-races">Reset all races</button></div>
         </dialog>
+        <dialog id="firstRaceHelpDialog" class="confirm-dialog" aria-labelledby="firstRaceHelpTitle">
+          <p class="eyebrow">Quick reminder</p><h3 id="firstRaceHelpTitle">How strict typing works</h3>
+          <p>If you type the wrong letter, it turns red and your cursor waits. Press Backspace to correct it, then continue typing.</p>
+          <div class="dialog-actions"><button class="primary" data-action="confirm-first-race-help">OK, start race</button></div>
+        </dialog>
 
         <section class="screen podium-screen" id="podiumScreen" aria-labelledby="podiumTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
           <p class="eyebrow">Championship complete</p>
           <h2 id="podiumTitle">The final podium.</h2>
           <p class="podium-summary">Five races decided the standings. Here are the top three.</p>
@@ -201,23 +217,233 @@
             <div class="podium-winner podium-first" data-podium-place="1"></div>
             <div class="podium-winner podium-third" data-podium-place="3"></div>
           </div>
-          <div class="podium-actions"><button class="primary" id="podiumContinueButton" data-action="continue-championship">Next Level</button><button class="secondary" id="podiumRetryButton" data-action="retry-level">Replay This Level</button><button class="secondary" data-action="dashboard">Return to Races</button></div>
+          <div class="podium-actions"><button class="primary" id="podiumContinueButton" data-action="continue-championship">Next Level</button><button class="secondary" id="podiumRetryButton" data-action="retry-level">Replay This Level</button><button class="secondary" data-action="dashboard">Race setup</button></div>
+          <p id="victoryControls" hidden><span data-victory-motion-note hidden>Your device reduces motion.</span> <button type="button" class="inline-button" id="replayFireworksButton" data-action="replay-fireworks">Replay fireworks</button></p>
         </section>
 
         <section class="screen library-screen" id="libraryScreen" aria-labelledby="libraryTitle">
-          <div class="screen-nav global-screen-nav"><button class="secondary compact" data-action="home">Home</button><button class="secondary compact" data-action="finish-screen">Finish screen</button></div>
-          <div class="section-heading"><div><p class="eyebrow">Content studio</p><h2 id="libraryTitle">Passage library</h2><p>Create and manage the sentences and paragraphs used in races.</p></div><button class="secondary" data-action="dashboard">Done</button></div>
+          <div class="section-heading"><div><p class="eyebrow">Pick your trail</p><h2 id="libraryTitle">Passage library</h2><p>Every good adventure starts with a few words.</p></div><button class="secondary" data-action="dashboard">Back to race setup</button></div>
           <div class="library-grid">
             <div class="passage-list-panel"><div class="library-toolbar"><button class="primary compact" data-action="new-passage">+ New passage</button><button class="secondary compact" data-action="export-passages">Export TXT</button><label class="secondary compact file-label">Import TXT<input id="importFile" type="file" accept="text/plain,.txt" /></label></div><div class="passage-list" id="passageList"></div></div>
             <form class="editor-panel" id="passageForm"><input id="passageId" type="hidden" /><label>Section<input id="passageCategory" list="passageCategoryOptions" maxlength="40" required /><datalist id="passageCategoryOptions"></datalist></label><label>Passage name<input id="passageTitle" maxlength="60" required /></label><label>Source<input id="passageSource" maxlength="80" placeholder="Book, movie, or custom source" /></label><label>Text<textarea id="passageText" rows="12" required></textarea></label><div class="editor-details"><label class="check-label"><input id="passageEnabled" type="checkbox" checked /> Enabled for races</label><span id="passageLength">0 characters</span></div><p class="form-error" id="passageError" role="alert"></p><div class="editor-actions"><button class="primary" type="submit">Save passage</button><button class="secondary" type="button" data-action="preview-passage">Preview</button><button class="danger" type="button" data-action="delete-passage">Delete</button></div></form>
+          </div>
+        </section>
+
+        <section class="screen creator-screen" id="creatorScreen" aria-labelledby="creatorTitle">
+          <div class="section-heading"><div><p class="eyebrow">Build a race series</p><h2 id="creatorTitle">Campaign Forge</h2><p>Pick the passages, tracks, and rivals for each race.</p></div><button class="secondary" data-action="dashboard">Back to race setup</button></div>
+          <div id="creatorLocked" class="creator-lock"><div><strong>Free Creator’s Camp preview</strong><p>Campaign tools are free to try in this preview. No payment or account is required.</p></div><button class="primary" data-action="enable-creator">Enable creator preview</button></div>
+          <div id="creatorWorkspace" class="creator-workspace hidden">
+            <aside class="campaign-sidebar"><div class="creator-toolbar"><button class="primary compact" data-action="new-campaign">+ Campaign</button><label class="secondary compact file-label">Import .dinocamp<input id="campaignImportFile" type="file" accept=".dinocamp,application/json" /></label></div><div id="campaignList"></div></aside>
+            <form id="campaignForm" class="campaign-editor">
+              <input id="campaignId" type="hidden" />
+              <div class="campaign-fields"><label>Campaign title<input id="campaignTitle" maxlength="80" required /></label><label>Age range<input id="campaignAge" maxlength="30" /></label><label class="wide">Description<textarea id="campaignDescription" rows="2" maxlength="800"></textarea></label><label class="wide">Learning goal<input id="campaignGoal" maxlength="160" /></label><label class="wide">Adventure intro<textarea id="campaignIntro" rows="2" maxlength="1000"></textarea></label><label class="wide">Victory message<textarea id="campaignVictory" rows="2" maxlength="1000"></textarea></label></div>
+              <div class="campaign-level-toolbar"><button type="button" class="secondary compact" data-action="previous-level">&larr; Level</button><strong id="campaignLevelLabel">Level 1 of 1</strong><button type="button" class="secondary compact" data-action="next-level">Level &rarr;</button><button type="button" class="secondary compact" data-action="add-level">+ Level</button><button type="button" class="danger compact" data-action="remove-level">Remove level</button></div>
+              <label>Level title<input id="campaignLevelTitle" maxlength="80" /></label><label>Rewards (comma separated)<input id="campaignRewards" maxlength="200" placeholder="Golden Key badge, Nova racer" /></label>
+              <div id="campaignRaceEditor" class="campaign-race-editor"></div>
+              <p id="campaignError" class="form-error" role="alert"></p>
+              <div class="editor-actions"><button class="primary" type="submit">Save campaign</button><button class="primary" type="button" data-action="use-campaign">Use in Race Controls</button><button class="secondary" type="button" data-action="test-campaign">Test level</button><button class="secondary" type="button" data-action="duplicate-campaign">Duplicate</button><button class="secondary" type="button" data-action="export-campaign">Export</button><button class="danger" type="button" data-action="delete-campaign">Delete</button></div>
+            </form>
+          </div>
+        </section>
+
+        <section class="screen racer-workshop-screen" id="racerWorkshopScreen" aria-labelledby="racerWorkshopTitle">
+          <div class="section-heading"><div><p class="eyebrow">Creator's camp</p><h2 id="racerWorkshopTitle">Racer Workshop</h2><p>Your drawing. Your dinosaur. Your next champion.</p></div><button class="secondary" data-action="dashboard">Back to race setup</button></div>
+          <div class="workshop-grid">
+            <aside class="workshop-guide">
+              <span class="studio-number">1</span><h3>Prepare the artwork</h3>
+              <p><strong>Best file:</strong> 1024 × 1024 transparent PNG. WebP and JPEG also work.</p>
+               <div class="anchor-guide" aria-label="Racer placement guide"><img id="defaultRacerGuide" class="anchor-reference" alt="Faint default racer alignment guide" /><i></i><b>Feet: X 512, Y 856 · match the faint Racer</b></div>
+              <ul><li>Face the racer toward the right.</li><li>Keep feet together near the crosshair.</li><li>Leave space around hats, tails, and wings.</li><li>Transparent backgrounds work immediately.</li><li>Solid hot pink can be removed automatically.</li></ul>
+              <label class="primary file-label workshop-upload">Choose artwork<input id="customRacerFile" type="file" accept="image/png,image/webp,image/jpeg" /></label><p class="form-error" id="customRacerError" role="alert"></p>
+            </aside>
+            <div class="workshop-editor">
+              <div class="workshop-controls"><label>Racer nickname<input id="customRacerName" name="gameAliasWorkshop" type="text" autocomplete="section-game-workshop nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" maxlength="30" value="My Racer" /></label><label>Background<select id="customRacerMode"><option value="alpha">Already transparent</option><option value="pink">Remove hot pink</option></select></label><label>Pink tolerance<input id="customRacerTolerance" type="range" min="20" max="160" value="70" /></label><label>Size<input id="customRacerScale" type="range" min="35" max="180" value="100" /></label><label>Left / right<input id="customRacerOffsetX" type="range" min="-300" max="300" value="0" /></label><label>Up / down<input id="customRacerOffsetY" type="range" min="-300" max="300" value="0" /></label></div>
+              <div class="workshop-previews"><div><span>1024 × 1024 export</span><canvas id="customRacerCanvas" width="1024" height="1024"></canvas></div><div><span>Race-size preview</span><div class="track-preview"><img id="customRacerTrackPreview" alt="Custom racer preview on the current track" /></div></div></div>
+               <section class="saved-custom-racers" aria-labelledby="savedCustomRacersTitle"><div><h3 id="savedCustomRacersTitle">Saved custom Racers</h3><small>Delete artwork you no longer want on this player profile.</small></div><div id="savedCustomRacerList" class="saved-custom-racer-list"></div></section>
+               <div class="workshop-actions"><p><strong>Private by default.</strong> Saved racers stay on this browser and belong to this player profile.</p><div><button class="secondary" data-action="add-another-racer">Save &amp; add another Racer</button><button class="primary" data-action="save-custom-racer">Save &amp; use this Racer</button></div></div>
+            </div>
+          </div>
+        </section>
+        <section class="screen help-screen" id="helpScreen" aria-labelledby="helpTitle">
+          <header class="help-hero">
+            <div><p class="eyebrow">Dino Type Racer field guide</p><h2 id="helpTitle" tabindex="-1">Game Help</h2><p><strong>Click the DR button in the top-left corner to return to Race Setup</strong>, the main settings page where you choose your racer, passages, and level.</p></div>
+            <button class="secondary compact" id="helpBackButton" type="button" data-action="back-from-help">&larr; Back to game</button>
+          </header>
+          <div class="help-layout">
+            <div class="help-search">
+              <label for="helpSearch">Search the guide</label>
+              <div><input id="helpSearch" type="search" autocomplete="off" placeholder="Try “Backspace”, “replay”, or “backup”" /><button class="secondary compact" id="helpClear" type="button" hidden>Clear</button></div>
+              <p id="helpSearchStatus" role="status"></p>
+            </div>
+            <nav class="help-topics" aria-label="Help topics">
+              <p class="eyebrow">Jump to a topic</p>
+              <ul>
+                <li><button type="button" data-help-topic="help-start">Quick start</button></li>
+                <li><button type="button" data-help-topic="help-typing">Typing &amp; controls</button></li>
+                <li><button type="button" data-help-topic="help-levels">Scores, levels &amp; replays</button></li>
+                <li><button type="button" data-help-topic="help-passages">Passage library</button></li>
+                <li><button type="button" data-help-topic="help-saves">Players, saves &amp; backups</button></li>
+                <li><button type="button" data-help-topic="help-creator">Creator's Camp</button></li>
+                <li><button type="button" data-help-topic="help-classroom">Classroom races</button></li>
+                <li><button type="button" data-help-topic="help-faq">FAQ &amp; troubleshooting</button></li>
+              </ul>
+            </nav>
+            <div class="help-content">
+              <div class="help-empty" id="helpEmpty" hidden><strong>No matching topics.</strong><p>Try fewer words or clear the search to see the full guide.</p></div>
+
+              <section class="help-section help-quick-start" aria-labelledby="help-start">
+                <h3 id="help-start" tabindex="-1">Quick start</h3>
+                <div data-help-entry>
+                  <p>Race dinosaurs by typing the passage on screen. Every correct key moves your racer closer to the finish.</p>
+                  <ol>
+                    <li><strong>Save a nickname.</strong> On <strong>Race setup</strong>, enter a <strong>Racer nickname</strong> (up to 24 characters) and click <strong>Save player</strong>. Use <strong>Switch player</strong> if you already have a saved profile on this browser.</li>
+                    <li><strong>Set starting pace.</strong> Choose <strong>Set starting pace</strong>. Pick <strong>Strict</strong> or <strong>Flow</strong>, then type. Your first keystroke starts the 60-second timer. If you know your speed, enter 5–250 WPM under <strong>Know your speed?</strong> and click <strong>Use this pace &amp; skip test</strong>.</li>
+                    <li><strong>Confirm Game Settings.</strong> Review rival speed, typing mode, and sound. Click <strong>OK — use these settings</strong> the first time. You can change them later.</li>
+                    <li><strong>Pick a dinosaur.</strong> Keep your current racer or open <strong>More racers</strong>, pick a dinosaur to preview it, and click <strong>Accept runner</strong>.</li>
+                    <li><strong>Hit the track.</strong> Pick a group in the <strong>Passages</strong> dropdown, choose an unlocked level, and click <strong>Start Level</strong>. Read the first-race reminder and choose <strong>OK, start race</strong> if it appears. Wait for 3–2–1 to finish before typing.</li>
+                  </ol>
+                </div>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-typing">
+                <h3 id="help-typing" tabindex="-1">Typing &amp; controls</h3>
+                <details data-help-entry><summary>What is the difference between Strict and Flow?</summary><div>
+                  <p>In either mode, type the passage as shown, including capital letters, punctuation, and spaces. When the countdown ends, click the typing area if it doesn't have focus.</p>
+                  <ul><li><strong>Strict:</strong> A wrong key marks the current character red and stops progress. Press <kbd>Backspace</kbd> once to clear it, then type the expected character. The mistake still counts, but extra keys pressed while the error is waiting for correction don't add more mistakes. Backspace doesn't rewind correctly typed text.</li>
+                  <li><strong>Flow:</strong> A wrong key marks the missed character red and moves the cursor on. Keep typing the next character. Backspace doesn't go back to repair previous characters.</li></ul>
+                  <p>The pace test has its own mode selection. Set the mode for regular races separately under <strong>Game Settings</strong>.</p>
+                </div></details>
+                <details data-help-entry><summary>Pause, resume, restart, or leave a race</summary><div>
+                  <ul><li>Press <kbd>Esc</kbd> or click <strong>Pause</strong>. Press <kbd>Esc</kbd> again or choose <strong>Resume</strong> when you're ready. Switching tabs or windows can pause a solo race.</li>
+                  <li><strong>Restart race</strong> in the pause menu restarts the current unfinished race from the beginning. It's different from spending a replay on a finished race.</li>
+                  <li><strong>Race setup</strong> (or the <strong>DR</strong> logo) takes you back to the Ready screen. Choose <strong>Resume race</strong> to return to a paused race. Opening Help also pauses an active solo race; it does not submit or restart it.</li></ul>
+                </div></details>
+                <details data-help-entry><summary>Change rival speed, missed-key hints, sound, or colors</summary><div>
+                  <ul><li><strong>Computer difficulty:</strong> Move the slider down for slower rivals or up for faster ones. <strong>Projected rivals</strong> shows the expected WPM range. <strong>Change pace</strong> or <strong>Retake test</strong> lets you change your starting pace.</li>
+                  <li><strong>Missed-key helper:</strong> When enabled, it can bold letters you've repeatedly hit by mistake (four or more misses). It ignores whitespace and doesn't change your score. Disable it if you prefer plain text.</li>
+                  <li><strong>Key Noise:</strong> Turns typing feedback sounds on or off. The music note in the header separately controls race music.</li>
+                  <li><strong>Colors</strong> changes the color scheme. <strong>Aa</strong> toggles high contrast. <strong>~ Reduce racer animation</strong> keeps the racers' poses steady while they advance; it doesn't change camera movement, menus, or fireworks.</li></ul>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-levels">
+                <h3 id="help-levels" tabindex="-1">Scores, levels &amp; replays</h3>
+                <details data-help-entry><summary>Read the finish screen and review mistakes</summary><div>
+                  <p>The big heading is your place in that race. <strong>WPM</strong> is speed (five correct characters count as a word), <strong>Avg WPM</strong> averages your recorded races in the level, and <strong>Peak WPM</strong> is the fastest measured pace in that race. <strong>Accuracy</strong> shows how many counted keystrokes were correct; <strong>Errors</strong> is the number of mistakes. No mistakes earns <strong>Perfect!</strong> A first-place race finish celebrates on the track even if you made a mistake.</p>
+                  <p>Open <strong>Mistake Stats</strong> to see missed keys, what you pressed instead, and where in the passage it happened. Switch between <strong>This race</strong> and <strong>All five races</strong> when available. From Ready, use <strong>Last race results</strong> to reopen the latest finish.</p>
+                </div></details>
+                <details data-help-entry><summary>Go to the next race or level and view the podium</summary><div>
+                  <p><strong>Up next</strong> shows the next race. Click <strong>Start Race</strong> on the finish screen or press <kbd>Enter</kbd> when that button is focused. A standard level has five races. After the fifth, choose <strong>Go to Level</strong> for the next level (if available) or <strong>View Podium</strong> to see the top three. You don't have to win to advance.</p>
+                  <p><strong>Level points</strong> is separate from your individual finish. In a five-racer field first earns 5 points, second earns 4, and so on. The number of levels depends on the enabled passages in your chosen group; a 50-passage group provides ten levels.</p>
+                </div></details>
+                <details data-help-entry><summary>Replay a race or revisit a finished level</summary><div>
+                  <ol><li>On Ready, set <strong>Allowed replays per level</strong>. To share that limit across the game instead, turn on <strong>Override per level to per Game</strong>.</li>
+                  <li>On a finish screen, check the used and remaining replays, then click <strong>Use 1 Replay — Retry Race</strong>. A retry replaces the previous result for that race; it doesn't keep both scores.</li>
+                  <li>To revisit an older level, select the completed level on Ready and click <strong>Replay Level</strong>. This opens its existing results. Pick a <strong>Race</strong> there before spending a replay; opening the results alone doesn't spend one.</li></ol>
+                </div></details>
+                <details data-help-entry><summary>Reset races for a passage group</summary><div>
+                  <p>On Ready, choose the right group in <strong>Passages</strong>, then click <strong>Reset all races</strong>. Read the confirmation before proceeding. This clears matching local race progress and scores for that group, including matching race records in other profiles on this browser. It doesn't delete the passages or clear the online leaderboard. Export a backup first if you want to keep those results.</p>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-passages">
+                <h3 id="help-passages" tabindex="-1">Passage library</h3>
+                <details data-help-entry><summary>Choose what to type or browse existing passages</summary><div>
+                  <p>On Ready, the <strong>Passages</strong> dropdown chooses the group for your level. <strong>Change passages</strong> opens the library. Click a section title to expand or collapse it. Select a passage to read or edit it; <strong>Use</strong> selects its group, but the exact next passage comes from the level's race order. Finish the current level before changing groups if you want to keep playing that series.</p>
+                </div></details>
+                <details data-help-entry><summary>Write, edit, or copy a passage</summary><div>
+                  <ol><li>Open <strong>Change passages</strong>, then choose <strong>+ New passage</strong> or <strong>Copy</strong> on an existing one.</li>
+                  <li>Enter a <strong>Section</strong> (existing or new), a <strong>Passage name</strong>, optional <strong>Source</strong>, and the <strong>Text</strong>. Use 30–5,000 characters after whitespace is cleaned up.</li>
+                  <li>Keep <strong>Enabled for races</strong> checked to include it. Use <strong>Preview</strong> to check how quotes, spaces, and punctuation will appear, then <strong>Save passage</strong>.</li></ol>
+                </div></details>
+                <details data-help-entry><summary>Import or export a group as a text file</summary><div>
+                  <p>Choose <strong>Import TXT</strong> and pick a plain-text file. In the simple format, the first nonblank line is the section name and each following nonblank line is one full passage. Keep each passage on a single line, even when it contains several sentences.</p>
+                  <pre>Rainforest Practice
+The muddy trail bends sharply by a waterfall.
+At sunset, the youngest dinosaur finds a shortcut through the ferns.</pre>
+                  <p><strong>Export TXT</strong> makes a copy of the passage library you can import again. It doesn't include profiles, scores, or artwork. Some imports can replace matching passages, so keep an export before reorganizing a large library.</p>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-saves">
+                <h3 id="help-saves" tabindex="-1">Players, saves &amp; backups</h3>
+                <details data-help-entry><summary>Switch players and find a saved game</summary><div>
+                  <p>On Ready, click <strong>Switch player</strong> and choose a saved name to load that player's progress. You can also enter a nickname in that window to save or switch. Use a nickname rather than a real name if you don't want it appearing on a shared score.</p>
+                  <p>Profiles, race history, and artwork are saved in this browser. A different browser, browser profile, device, private window, or site address can have a different set of saves. Clearing site data can remove local progress.</p>
+                </div></details>
+                <details data-help-entry><summary>Move all your saves to another computer</summary><div>
+                  <ol><li>On Race setup, expand <strong>Creator's Camp</strong>. Under <strong>Move to another computer</strong>, choose <strong>Export backup</strong>.</li>
+                  <li>Copy the private <code>.dinobackup</code> file to the other computer. Open the game there and close any other tabs running it.</li>
+                  <li>Back up the destination first if it already has saves. Choose <strong>Import backup</strong>, select the file, review the summary, and confirm.</li></ol>
+                  <p><strong>Import replaces the destination's local saves; it doesn't merge them.</strong> The backup includes profiles, progress, libraries, campaigns, and custom racer artwork. It doesn't change the online leaderboard. Keep the file private and use the HTTPS site or a localhost copy for transfers.</p>
+                </div></details>
+                <details data-help-entry><summary>Understand local and online leaderboard scores</summary><div>
+                  <p>Open <strong>Leaderboard</strong> in the starting-pace card or on the finish page. On a site with online scores enabled, other players can see reported results, including a nickname, the passage title, speed, accuracy, and placement. The leaderboard does not share the full passage, your typing history, private saves, or custom artwork.</p>
+                  <p><strong>Showing scores saved on this browser</strong> means you're looking at local scores. An offline or local copy may not have a shared leaderboard, but it can still save your own race results.</p>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-creator">
+                <h3 id="help-creator" tabindex="-1">Creator's Camp</h3>
+                <details data-help-entry><summary>Build and play a campaign with Campaign Forge</summary><div>
+                  <p>On Ready, expand <strong>Creator's Camp</strong> and open <strong>Campaign Forge</strong>. Choose <strong>Enable creator preview</strong> if asked. The preview is free; no payment or account is required.</p>
+                  <ol><li>Click <strong>+ Campaign</strong>, then add a title and optionally a goal, age range, and story notes.</li>
+                  <li>Fill five race slots per level. Choose passages and tracks, or leave the fallback options. Save before moving to another level. The campaign format supports up to ten levels.</li>
+                  <li>Use <strong>Use in Race Controls</strong> to select the campaign, then <strong>Play</strong> in Creator's Camp. <strong>Test level</strong> runs the current level; it requires all five slots enabled and replaces the currently active series, so finish any in-progress series first.</li>
+                  <li><strong>Duplicate</strong> lets you try changes on a copy. Use <strong>Export</strong> and <strong>Import .dinocamp</strong> to move the campaign structure. Those files reference assets and passages; they don't include custom artwork, passage text, or a player's progress.</li></ol>
+                  <p>Some editor fields (including reward and story notes) are part of the preview and don't create new in-game rewards by themselves.</p>
+                </div></details>
+                <details data-help-entry><summary>Make, align, and save a Custom Racer</summary><div>
+                  <ol><li>Open <strong>Custom Racer</strong>, then <strong>Choose artwork</strong>. A 1024 × 1024 transparent PNG works best; WebP and JPEG also work, up to 12 MB. Face right and leave room around tails and hats.</li>
+                  <li>For a transparent image pick <strong>Already transparent</strong>. For a solid hot-pink backdrop pick <strong>Remove hot pink</strong>. Raise the tolerance if the pink edge stays; lower it if parts of the character disappear.</li>
+                  <li>Use the faint default dinosaur and crosshair to line up the feet near X 512, Y 856. Adjust <strong>Size</strong>, <strong>Left / right</strong>, and <strong>Up / down</strong>, and check the <strong>Race-size preview</strong>.</li>
+                  <li>Name it and choose <strong>Save &amp; use this Racer</strong> or <strong>Save &amp; add another Racer</strong>. Under <strong>Saved custom Racers</strong>, choose <strong>Delete</strong> to remove artwork you no longer need.</li></ol>
+                  <p>Custom artwork belongs to the active player on this browser. Make a backup to move it, or deliberately select it when hosting a local classroom room to share its portrait with the class.</p>
+                </div></details>
+                <details data-help-entry><summary>Use Typing DNA and understand Nemeses</summary><div>
+                  <p>Open <strong>Typing DNA</strong> from Creator's Camp to see recent scores, correction history, and repeating mistake patterns. A <strong>Nemesis</strong> represents a pattern worth practicing; campaign boss passages can include those patterns. Clean encounters help master a weakness, while another miss on that pattern can reset its clean streak.</p>
+                  <p>For a parent or teacher, use <strong>Print tutor report</strong>. Your browser's print dialog can also save the report as a PDF if that option is available.</p>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-classroom">
+                <h3 id="help-classroom" tabindex="-1">Classroom races</h3>
+                <details data-help-entry><summary>Host Race of the Day or join with a room code</summary><div>
+                  <p><strong>Local preview:</strong> These buttons only appear when your copy of the game supports classroom rooms. Try it in two tabs on the same computer, or use a shared address on a configured classroom network. A localhost address on one computer isn't shared with other computers.</p>
+                  <ol><li><strong>Teacher:</strong> In Creator's Camp, choose <strong>Host a race</strong>. Select an enabled passage and check the built-in and custom racers you want to share (1–32 racers, one student per racer). Choose <strong>Open room</strong> and share the four-digit code privately.</li>
+                  <li><strong>Student:</strong> On the same game server, click <strong>Join race</strong> by the nickname field. Enter your nickname and code, click <strong>Join lobby</strong>, and choose an available dino.</li>
+                  <li><strong>Start:</strong> The teacher clicks <strong>Start race</strong> after everyone has chosen. Wait for the shared countdown, then type in Strict mode. Positions show in the room standings as players finish.</li></ol>
+                  <p>These races don't update solo progress or the public leaderboard. The teacher shares only the selected passage and portraits, and the room is temporary. If a code doesn't work, check that everyone is on the same server and that the teacher hasn't ended the room.</p>
+                </div></details>
+              </section>
+
+              <section class="help-section" aria-labelledby="help-faq">
+                <h3 id="help-faq" tabindex="-1">FAQ &amp; troubleshooting</h3>
+                <details data-help-entry><summary>Why is everything dimmed on the Ready page?</summary><div><p>Save a nickname first. Next, set your starting pace with the test or the manual WPM option. Then review Game Settings and choose <strong>OK — use these settings</strong>. That unlocks racer and level selection.</p></div></details>
+                <details data-help-entry><summary>Why isn't typing moving my dinosaur?</summary><div><p>Wait for the countdown and check for a pause overlay. Click the typing area if it lost focus. If a red character is blocking the cursor in Strict mode, press <kbd>Backspace</kbd> and type the expected key. Check capitalization and spaces too.</p></div></details>
+                <details data-help-entry><summary>Why didn't I see fireworks for first place?</summary><div><p>Fireworks play on the track when you win a race and on the podium if you finish first overall in the level. They don't play on the score and stats page. Choose <strong>View Podium</strong> after the last race to see the level celebration. If your device's accessibility settings request reduced motion, you'll see still fireworks. The game's <strong>~ Reduce racer animation</strong> toggle does not affect fireworks. On a winning podium, <strong>Play fireworks once</strong> or <strong>Replay fireworks</strong> plays the animation without using a race replay.</p></div></details>
+                <details data-help-entry><summary>Do I need an account or have to donate to play?</summary><div><p>No. Solo racing doesn't require an account or a payment. The <strong>Donate</strong> link is optional and opens a separate Stripe page. The game doesn't need a credit card to save your nickname. Dismiss any unrelated browser autofill suggestion in that field.</p></div></details>
+                <details data-help-entry><summary>Where did my progress go?</summary><div><p>Check <strong>Switch player</strong> for your saved nickname. Use the same browser profile and site address you played on before. If you changed computers or cleared your browser data, import a previously exported <code>.dinobackup</code> file. The online leaderboard isn't a copy of your saved game.</p></div></details>
+                <details data-help-entry><summary>Still stuck? Contact support</summary><div><p><a href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Email Dino Type Racer support</a>. Include the page you were on, what you clicked, what happened, and your browser and device. A screenshot can help; leave out private details, passwords, and payment information.</p></div></details>
+              </section>
+              <button class="inline-button" type="button" id="helpTop">Back to top &uarr;</button>
+            </div>
           </div>
         </section>
       </main>
       <footer><span>Original game and artwork &middot; Local progress only</span><span>Press Escape to pause a race</span></footer>
     </div>
 
+    <dialog id="dailyRoom" aria-labelledby="dailyTitle"><header><p class="eyebrow">Creator’s Camp · local classroom</p><h2 id="dailyTitle">Race of the Day</h2></header><div id="dailyContent"></div><p id="dailyMessage" role="status"></p><footer><button class="secondary compact" type="button" id="exitDaily">Back to setup</button></footer></dialog>
     <dialog id="previewDialog"><button class="dialog-close" data-action="close-preview" aria-label="Close">&times;</button><p class="eyebrow">Passage preview</p><h3 id="previewTitle"></h3><p id="previewText"></p></dialog>
+    <dialog id="typingDnaDialog" class="mistake-dialog"><button class="dialog-close" data-action="close-typing-dna" aria-label="Close">&times;</button><p class="eyebrow">See what to practice</p><h3>Typing DNA</h3><div id="typingDnaReport"></div><div class="dialog-actions"><button class="secondary" data-action="print-typing-dna">Print tutor report</button><button class="primary" data-action="close-typing-dna">Done</button></div></dialog>
+    <dialog id="restoreBackupDialog" aria-labelledby="restoreBackupTitle">
+      <h3 id="restoreBackupTitle">Replace this browser’s game saves?</h3><p id="backupSummary"></p>
+      <p>This replaces all Dino Type Racer players and progress here. It does not merge them or change the online leaderboard. Export this browser first if you want to keep a copy, and close other game tabs before restoring.</p>
+      <div class="dialog-actions"><button type="button" class="secondary" id="cancelRestore" autofocus>Cancel</button><button type="button" class="primary" id="confirmRestore">Replace saves and reopen</button></div>
+    </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <script type="module" src="src/app.js"></script>
+    <script type="module" src="src/expedition-frame.js"></script>
   </body>
 </html>

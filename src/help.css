@@ -1,0 +1,117 @@
+#helpScreen [hidden] { display: none !important; }
+#helpButton[aria-current="page"] { background: var(--ink); color: var(--surface); }
+.race-help-button { min-width: 34px; }
+
+.help-screen.active {
+  max-width: 1180px;
+  margin: 12px auto 24px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 3px solid #b39c73;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 2px #fffbe8, 0 5px 0 #57483066;
+}
+.help-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  padding: clamp(18px, 3.4vw, 36px);
+  border-radius: 17px 17px 0 0;
+  background: linear-gradient(102deg, #0b3448 27%, #103b4ed4 74%, #103b4eb8),
+              url("../assets/ui/adventure-valley.png") center 46% / cover;
+  color: #fff8e7;
+}
+.help-hero > div { min-width: 0; }
+#helpScreen .help-hero .eyebrow { color: #ffda85; }
+.help-hero h2 { color: inherit; font-size: clamp(34px, 5vw, 64px); margin: 3px 0 8px; }
+.help-hero p:last-child { margin: 0; color: inherit; }
+.help-hero button { white-space: nowrap; }
+.help-layout {
+  display: grid;
+  grid-template-columns: minmax(175px, 228px) minmax(0, 1fr);
+  grid-template-areas: "topics search" "topics content";
+  align-items: start;
+  gap: 0 clamp(14px, 3vw, 32px);
+  padding: clamp(14px, 3vw, 32px);
+}
+.help-topics {
+  grid-area: topics;
+  position: sticky;
+  top: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.help-topics ul { list-style: none; padding: 0; margin: 6px 0 0; }
+.help-topics button {
+  min-height: 36px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+.help-topics button:hover { background: var(--panel); text-decoration: underline; }
+.help-content { grid-area: content; min-width: 0; }
+.help-search { grid-area: search; min-width: 0; }
+.help-search label { display: block; margin-bottom: 6px; font-weight: 800; }
+.help-search > div { display: flex; gap: 7px; }
+#helpSearch {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+}
+#helpSearchStatus { margin: 6px 0 0; color: var(--ink-soft); font-size: .9rem; }
+#helpSearchStatus:empty { margin: 0; }
+.help-empty {
+  margin: 14px 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.help-empty p { margin: 4px 0 0; }
+.help-section { margin: 24px 0; }
+.help-section h3 { margin: 0 0 10px; scroll-margin-top: 18px; font-size: clamp(19px, 2vw, 25px); }
+.help-section p, .help-section li { line-height: 1.6; }
+.help-section p:first-child { margin-top: 0; }
+.help-section p:last-child, .help-section ol:last-child, .help-section ul:last-child { margin-bottom: 0; }
+.help-section ol, .help-section ul { padding-inline-start: 1.4em; }
+.help-section li + li { margin-top: 7px; }
+.help-quick-start {
+  padding: clamp(14px, 2.3vw, 22px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.help-section details { margin-bottom: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.help-section summary { padding: 10px 13px; font-weight: 780; cursor: pointer; }
+.help-section summary::marker { color: var(--ink-soft); }
+.help-section details > div { padding: 3px 14px 14px; overflow-wrap: anywhere; }
+.help-section kbd, .help-section code { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; font-size: .9em; }
+.help-section pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; background: var(--panel); border: 1px solid var(--line); padding: 10px; border-radius: 8px; }
+
+@media (max-width: 730px) {
+  .help-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: "search" "topics" "content"; row-gap: 12px; }
+  .help-topics { position: static; }
+  .help-topics ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+}
+@media (max-width: 420px) {
+  .help-hero { flex-wrap: wrap; gap: 10px; }
+  .help-topics { padding: 10px; }
+}
+@media (forced-colors: active) {
+  .help-hero { background: Canvas; color: CanvasText; border-bottom: 1px solid CanvasText; }
+  #helpScreen .help-hero .eyebrow { color: CanvasText; }
+}

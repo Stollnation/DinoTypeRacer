@@ -1,0 +1,29 @@
+#dailyTeacherEntry[hidden],#joinDailyRace[hidden]{display:none}
+#dailyRoom{box-sizing:border-box;width:min(44rem,94vw);max-height:90dvh;overflow:auto;padding:clamp(1rem,2vw,1.7rem);color:var(--ink,#173e53);border:2px solid var(--line,#b79c72);background:var(--panel,#fffaf0);border-radius:16px}
+#dailyRoom::backdrop{background:#142e3acc}
+#dailyRoom h2,#dailyRoom h3,#dailyRoom h4,#dailyRoom p{margin:.35rem 0 .65rem}
+#dailyRoom footer{display:flex;justify-content:flex-end;margin:.7rem 0 0;padding:.7rem 0 0;border-top:1px solid var(--line);background:none}
+#dailyRoom form{display:grid;gap:.8rem;max-width:27rem}
+#dailyRoom label:not(.daily-card){display:grid;gap:.3rem;font-weight:700}
+#dailyRoom input,#dailyRoom select{max-width:100%;width:100%}
+#dailyRoom .daily-excerpt{font-size:.95rem;max-height:5.5rem;overflow:auto;padding:.6rem;background:#ffffff9c;border-radius:6px}
+.daily-dinos{display:grid;grid-template-columns:repeat(auto-fit,minmax(7rem,1fr));gap:.4rem;margin:.7rem 0}
+#dailyRoom .daily-card{display:grid;position:relative;align-content:start;justify-items:center;gap:.1rem;padding:.45rem;text-align:center;border:1px solid var(--line);border-radius:10px;background:#fffaf0;color:#173e53;cursor:pointer;font-size:.9rem}
+#dailyRoom .daily-card input{position:absolute;left:.35rem;top:.35rem;width:1rem;height:1rem}
+.daily-card img{width:64px;height:64px;object-fit:contain}
+#dailyRoom .daily-card[aria-pressed=true],#dailyRoom .daily-card:has(:checked){outline:2px solid #37734a;outline-offset:-2px}
+.daily-card:disabled{opacity:.55}
+.daily-roster{padding-left:1.4rem}.daily-roster li{margin:.35rem 0}.daily-roster button{margin-left:.65rem;padding:.15rem .45rem;min-height:auto}
+.daily-code,.daily-clock{font-size:1.4rem;font-weight:850;font-variant-numeric:tabular-nums}
+.daily-lanes{display:grid;gap:2px;margin:.5rem 0;max-height:33vh;overflow:auto}
+.daily-lane{display:grid;grid-template-columns:minmax(4rem,18%) 1fr;align-items:center;gap:.3rem;padding:0 .55rem;background:linear-gradient(#e8f1e0,#f9edce);color:#263c33;border-radius:6px;font-size:.85rem;font-weight:700}
+.daily-lane>span{overflow:hidden;text-overflow:ellipsis}
+.daily-rail{position:relative;height:46px;margin-right:48px}
+.daily-rail img{position:absolute;bottom:0;left:var(--distance,0%);width:48px;height:46px;object-fit:contain;transition:left .35s linear}
+.daily-keyboard{background:#fff;color:#112f42;padding:.6rem .8rem;border:1px solid #8d9ba3;border-radius:8px}
+.daily-keyboard[aria-disabled=true]{opacity:.55}.daily-keyboard:focus-visible{outline:3px solid #1676a5}
+#dailyRoom .daily-passage{position:relative;white-space:pre-wrap;overflow-wrap:anywhere;max-height:6.4em;overflow:auto;font:1.05rem/1.55 ui-monospace,monospace;font-variant-ligatures:none}
+.daily-typed{color:#4c6561}.daily-current{box-shadow:inset 2px 0 #186e95}.daily-wrong{color:#a11622;background:#ffe0dd;text-decoration:underline}
+#dailyMessage:not(:empty){font-weight:700}
+@media(prefers-reduced-motion:reduce){.daily-rail img{transition:none}}
+#dailyRoom.reduced-racer-motion .daily-rail img{transition:none}

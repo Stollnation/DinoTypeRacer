@@ -23,17 +23,31 @@ test("screen navigation exposes home, finish, and browser history controls", () 
   const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles.css", import.meta.url), "utf8");
-  assert.equal((html.match(/data-action="finish-screen"/g) || []).length, 6);
-  assert.equal((html.match(/global-screen-nav/g) || []).length, 5);
-  assert.match(html, /ready-profile[\s\S]*data-action="home"[\s\S]*data-action="finish-screen"/);
+  assert.equal((html.match(/global-screen-nav/g) || []).length, 0);
+  assert.match(html, /data-action="last-results"/);
   assert.match(html, /class="wordmark" data-action="race-controls"/);
-  assert.match(html, /id="raceScreen"[\s\S]*data-action="race-controls">Race Controls<[\s\S]*data-action="finish-screen">Finish screen</);
+  assert.match(html, /id="raceScreen"[\s\S]*data-action="race-controls">Race setup</);
   assert.match(app, /function openRaceControls/);
   assert.match(app, /history\.pushState/);
   assert.match(app, /history\.replaceState/);
   assert.match(app, /window\.addEventListener\("popstate"/);
   assert.match(app, /function restoreScreenFromHistory/);
   assert.match(css, /\.screen-nav/);
+});
+test("first visit guides name, pace, settings confirmation, then race setup", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /id="welcomeScreen"/);
+  assert.match(html, /id="startingPaceButton"/);
+  assert.match(html, /class="profile-step-badge"[^>]*>1</);
+  assert.match(html, /id="confirmGameSettingsButton"/);
+  assert.match(html, /data-action="confirm-game-settings"/);
+  assert.match(html, /Know your speed\?/);
+  assert.match(app, /function beginStartingPace/);
+  assert.match(app, /needsPlayerName/);
+  assert.match(app, /needsSettingsConfirmation/);
+  assert.match(app, /setupSettingsConfirmed = true/);
+  assert.match(app, /showDashboard\(\{ historyMode: "replace" \}\)/);
 });
 test("Ready support email and Stripe donation link are safe", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -72,6 +86,10 @@ test("starter library includes full courses and the supplied Harry Potter-inspir
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Movie Quotes").length, 0);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Books").length, 50);
   assert.equal(STARTER_PASSAGES.filter((item) => item.category === "Lord of the Rings Quotes").length, 50);
+  const spelling = STARTER_PASSAGES.filter((item) => item.category === "You can Spell");
+  assert.equal(spelling.length, 50);
+  assert.ok(spelling.every((item) => (item.text.match(/[.!?](?: |$)/g) || []).length >= 2));
+  assert.match(spelling.map((item) => item.text).join(" "), /definitely.*necessary.*accommodations.*embarrassing/i);
   assert.ok(STARTER_PASSAGES.filter((item) => item.category !== "General").every((item) => item.source));
   const beginner = STARTER_PASSAGES.filter((item) => item.category === "Typing Basics");
   assert.match(beginner[0].text, /fff jjj/);
@@ -121,14 +139,13 @@ test("manifest stages preserve valid lane geometry and scale past twenty tracks"
   assert.equal(manifest.tracks.length, 10);
   assert.ok(manifest.tracks.every((track) => track.id && track.displayName));
   assert.ok(manifest.characters.every((character) => character.id && character.displayName));
-  assert.deepEqual(manifest.tracks.map((track) => track.id), [
-    "prehistoric-winter", "prehistoric-wilds", "prehistoric-canyon", "prehistoric-arctic", "prehistoric-wetlands",
-    "moonfen-mire", "emberfall-caldera", "glowcap-caverns", "tempest-coast", "eclipse-dunes",
-  ]);
-  assert.deepEqual(manifest.tracks.map((track) => track.displayName), [
-    "Prehistoric Winter", "Prehistoric Wilds", "Prehistoric Canyon", "Prehistoric Arctic", "Prehistoric Wetlands",
-    "Moonfen Mire", "Emberfall Caldera", "Glowcap Caverns", "Tempest Coast", "Eclipse Dunes",
-  ]);
+  assert.deepEqual(manifest.tracks.map((track) => track.id), ["prehistoric-winter", "prehistoric-wilds", "prehistoric-canyon", "prehistoric-arctic", "prehistoric-wetlands", "moonfen-mire", "emberfall-caldera", "glowcap-caverns", "tempest-coast", "eclipse-dunes"]);
+  assert.deepEqual(manifest.tracks.map((track) => track.displayName), ["Prehistoric Winter", "Prehistoric Wilds", "Prehistoric Canyon", "Prehistoric Arctic", "Prehistoric Wetlands", "Moonfen Mire", "Emberfall Caldera", "Glowcap Caverns", "Tempest Coast", "Eclipse Dunes"]);
+  const wilds = manifest.tracks.find((track) => track.id === "prehistoric-wilds");
+  for (const track of manifest.tracks.slice(4)) {
+    assert.deepEqual(track, { ...wilds, id: track.id, displayName: track.displayName,
+      layers: { ...wilds.layers, background: `assets/tracks/${track.id}/${track.id}-panning-background.png` } });
+  }
   const sharedLaneBaselines = [443.25, 415.5, 387.75, 360, 471];
   const sharedRaceLine = { startX: 114, finishX: 1977 };
   assert.ok(manifest.tracks.every((track) => JSON.stringify(track.laneBaselines) === JSON.stringify(sharedLaneBaselines)));

@@ -20,6 +20,16 @@ export class RaceRenderer {
     })));
   }
 
+  async loadImage(url) {
+    if (!url || this.images.has(url)) return;
+    await new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => { this.images.set(url, image); resolve(); };
+      image.onerror = resolve;
+      image.src = url;
+    });
+  }
+
   character(id) { return this.manifest.characters.find((item) => item.id === id) || this.manifest.characters[0]; }
   track(id = this.currentTrackId) { return this.manifest.tracks.find((item) => item.id === id) || this.manifest.tracks[0]; }
   setTrack(id) { this.currentTrackId = this.track(id)?.id; this.cameraState = null; }

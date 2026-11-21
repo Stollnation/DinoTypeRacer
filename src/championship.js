@@ -1,5 +1,10 @@
 export const CHAMPIONSHIP_RACES = 5;
 
+export function highestSelectableLevel(playerName, unlockedLevel, totalLevels) {
+  const nickname = String(playerName ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  return nickname === "ricky bobby" ? totalLevels : Math.max(1, Math.min(totalLevels, unlockedLevel || 1));
+}
+
 export function rankRace(player, racers, playerTime) {
   const field = [
     { ...player, finishTime: playerTime, progress: 1 },
