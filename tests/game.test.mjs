@@ -290,7 +290,7 @@ test("HD-to-4K layout uses fluid sizing and browser scrolling", () => {
   assert.match(css, /grid-template-rows: minmax\(0, 1fr\) var\(--race-typing-height\)/);
   assert.match(css, /body\[data-screen="dashboard"\] \{ overflow-y: auto;\s+overflow-x: hidden; \}/);
   assert.match(css, /dashboard-screen\.active \.launch-bar/);
-  assert.match(app, /focusKeys: activeFocusKeys\(\)/);
+  assert.match(app, /focusKeys: timedChallenge \? \[\] : activeFocusKeys\(\)/);
 });
 test("runner assets are ready for square 1024 frames without display stretching", () => {
   const manifest = JSON.parse(readFileSync(new URL("../assets/manifest.json", import.meta.url), "utf8"));

@@ -268,7 +268,7 @@ body[data-screen=dashboard] .awaiting-settings-confirmation :is(.runner-control-
 .transfer-actions { display:flex; flex-wrap:wrap; gap:8px; }
 #backupStatus:not(:empty) { flex-basis:100%; }
 #restoreBackupDialog { max-width:min(92vw,480px); }
-body[data-screen=dashboard] .awaiting-player-name .calibration-card { filter: grayscale(.9); opacity: .42; pointer-events: none; user-select: none; }
+body[data-screen=dashboard] .awaiting-player-name .calibration-card :is(.calibration-step-badge, .calibration-card-content) { filter: grayscale(.9); opacity: .48; }
 body[data-screen=dashboard] .awaiting-player-name .ready-profile { border-color: #ffd35b; box-shadow: 0 0 0 5px #f9941c3d,0 5px 16px #172d2235; }
 body[data-screen=dashboard] .awaiting-starting-pace .calibration-card { cursor: pointer; border-color: #ffd35b; box-shadow: inset 0 0 0 2px #fff0a8,0 0 0 5px #f9941c55,0 10px 24px #172d2255; }
 body[data-screen=dashboard] .awaiting-settings-confirmation .race-controls-grid > .setup-panel:first-child { border-color: #ffd35b; box-shadow: inset 0 0 0 2px #fff0a8,0 0 0 5px #f9941c55,0 10px 24px #172d2255; }
@@ -380,7 +380,10 @@ body[data-screen=dashboard] #dashboardScreen { gap: 9px; }
 #dashboardScreen.awaiting-player-name .ready-player-card { border-color: #ffd35b; box-shadow: 0 0 0 3px #f9941c50; }
 #dashboardScreen .ready-secondary-actions { justify-content: flex-start; padding: 0; margin-inline-start: 37px; gap: 8px; background: none; }
 #dashboardScreen .support-email-link { min-height: 22px; padding: 0 4px; text-decoration: underline; }
-#dashboardScreen .calibration-card { grid-area: auto; align-self: stretch; min-height: 0; padding: 9px clamp(10px, 1.25vw, 20px); }
+body[data-screen=dashboard] #dashboardScreen .calibration-card {
+  grid-area: auto; align-self: stretch; min-height: 0; padding: 8px clamp(10px, 1.25vw, 20px);
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-content: center; gap: 4px 10px;
+}
 #dashboardScreen .calibration-card-content {
   display: flex; flex: 1; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 18px;
 }
@@ -397,6 +400,113 @@ body[data-screen=dashboard] #dashboardScreen { gap: 9px; }
   border: 1px solid #ffffff80; padding-inline: 9px; background: #ffffff20; text-decoration: none;
 }
 #dashboardScreen #startingPaceButton:not(:disabled):hover { background: #ffffff39; }
+#dashboardScreen .pace-challenge-action {
+  grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px;
+  cursor: auto; text-align: start;
+}
+body[data-screen] #dashboardScreen .challenge-button {
+  min-height: 30px; padding: 3px 11px; border: 1px solid #ff9a88; border-radius: 8px;
+  background: #b62526; color: #fff; font-size: 12px; font-weight: 850; line-height: 1.2;
+}
+body[data-screen] #dashboardScreen .challenge-button:hover { background: #921a20; }
+body[data-screen] #dashboardScreen .challenge-button:disabled { opacity: .47; cursor: not-allowed; }
+body[data-screen] #dashboardScreen .challenge-button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#dashboardScreen .pace-challenge-action small { color: inherit; font-size: 11px; }
+#dashboardScreen :is(.nickname-step-hint, .nickname-availability) { margin: 1px 0 0 37px; font-size: 11px; font-weight: 750; text-align: start; }
+#dashboardScreen .nickname-step-hint > span { color: #96330c; font-size: 14px; }
+#dashboardScreen .nickname-availability { color: #941923; animation: nickname-cue 1.15s 2 ease-in-out; }
+#dashboardScreen.awaiting-player-name:not(.nickname-entered) #dashboardPlayerName,
+#dashboardScreen.awaiting-player-name.nickname-entered #saveDashboardPlayer:not(:disabled) {
+  border-color: #c46b16; box-shadow: 0 0 0 3px #ffc36d75; animation: nickname-cue 1.35s 3 ease-in-out;
+}
+@keyframes nickname-cue { 50% { box-shadow: 0 0 0 5px #f2915180; } }
+#dashboardScreen .settings-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px 10px; }
+#dashboardScreen .settings-support { display: flex; align-items: center; flex-wrap: wrap; gap: 1px 7px; font-size: 10px; color: var(--ink-soft); }
+#dashboardScreen .settings-support .support-email-link { padding-inline: 0; font-size: inherit; pointer-events: auto; }
+@media (max-width: 450px) { #dashboardScreen .settings-heading { grid-template-columns: minmax(0,1fr); } }
+
+body[data-screen=challenge] .adventure-scenery {
+  background-image: linear-gradient(180deg,#061d2990,#03171cd9),url('assets/ui/adventure-valley.png');
+}
+body[data-screen=challenge] .adventure-foreground { display: none; }
+body[data-screen=challenge] .challenge-screen.active {
+  width: min(1370px,100%); margin: clamp(12px, 3vh, 38px) auto; padding: 0; color: #fff5dc;
+}
+.challenge-lobby-head {
+  display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px;
+  padding: 0 2px 14px;
+}
+body[data-screen=challenge] .challenge-lobby-head .eyebrow { color: #ffe0a1; }
+.challenge-lobby-head h2 { margin: 0; text-shadow: 0 2px 8px #05252e; }
+.challenge-lobby-grid { display: grid; grid-template-columns: minmax(275px,.78fr) minmax(0,1.65fr); gap: 14px; align-items: stretch; }
+.challenge-lobby-board {
+  min-width: 0; padding: clamp(15px,2.4vw,30px); border-radius: 17px; border: 2px solid #c5a66c;
+  background: #fbf3df; color: #143c55; box-shadow: inset 0 0 0 4px #e7d5ad, 0 7px 0 #291b1475;
+}
+body[data-screen=challenge] .challenge-lobby-board h3 { margin: 0 0 10px; font-size: clamp(23px, 2.4vw, 35px); }
+.challenge-lobby-board .challenge-scores-list { margin: 0; font-variant-numeric: tabular-nums; }
+.challenge-lobby-board .challenge-scores-list li::marker { color: #975123; font-weight: 850; }
+.challenge-lobby-board .challenge-scores-list li:first-child { background: #f5dfaa; border-radius: 6px 6px 0 0; }
+.challenge-lobby-feature {
+  position: relative; isolation: isolate; display: flex; align-items: center; min-height: 436px;
+  padding: clamp(18px,3.4vw,48px); overflow: hidden; border: 2px solid #c5a66c; border-radius: 17px;
+  background: linear-gradient(90deg,#0c2c30 1%,#0c2c30e8 36%,#0c2c3050 72%,#0c2c3070),
+    url('assets/ui/adventure-valley.png') 60% 50% / cover;
+  box-shadow: inset 0 0 0 3px #ffe2a030, 0 7px 0 #291b1475;
+}
+.challenge-lobby-copy { position: relative; z-index: 2; width: 58%; padding-block: 0 34px; }
+body[data-screen=challenge] .challenge-lobby-copy .eyebrow { color: #ffe0a1; }
+body[data-screen=challenge] .challenge-lobby-copy h3 {
+  margin: 6px 0 8px; font-size: clamp(28px,4.15vw,61px); line-height: .98; letter-spacing: -.04em;
+  text-shadow: 0 2px 6px #071a22;
+}
+.challenge-lobby-copy > p:not(.eyebrow) { max-width: 29ch; margin: 10px 0 16px; color: #f7f0d8; line-height: 1.4; }
+.challenge-mode-picker { width: min(100%, 17rem); min-inline-size: 0; margin: 0 0 14px; padding: 0; border: 0; }
+.challenge-mode-picker legend {
+  margin-bottom: 6px; padding: 0; color: #ffe0a1; font-size: .75rem;
+  font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+}
+.challenge-mode-picker > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.challenge-mode-picker button {
+  min-width: 0; min-height: 36px; padding: 5px 9px; border: 1px solid #c7aa75; border-radius: 8px;
+  background: #102d2e; color: #fff5dc; font-weight: 800;
+}
+.challenge-mode-picker button[aria-pressed="true"] { background: #ffe0a1; color: #102d2e; }
+.challenge-mode-picker button:focus-visible { outline: 2px solid #fff5dc; outline-offset: 2px; }
+.challenge-mode-picker p { margin: 6px 0 0; min-height: 2.6em; color: #fff5dc; font-size: .8rem; line-height: 1.3; }
+.challenge-lobby-feature > img {
+  position: absolute; z-index: 1; width: 65%; height: 92%; right: -3%; bottom: 4%;
+  object-fit: contain; filter: drop-shadow(0 15px 16px #051b22bb); pointer-events: none;
+}
+.challenge-play-ticker {
+  position: absolute; z-index: 2; right: 14px; bottom: 14px; display: grid; gap: 2px; text-align: center;
+  padding: 7px 12px; min-width: 139px; border: 1px solid #c7aa75; border-radius: 10px; background: #102d2eea;
+}
+.challenge-play-ticker strong { color: #ffe2a4; font-size: clamp(21px,2.2vw,31px); line-height: 1; font-variant-numeric: tabular-nums; }
+.challenge-play-ticker span { font-size: 10px; font-weight: 800; color: #fff3d7; text-transform: uppercase; letter-spacing: .05em; }
+@media (max-width: 700px) {
+  .challenge-lobby-grid { grid-template-columns: minmax(0,1fr); }
+  .challenge-lobby-feature { order: -1; min-height: 330px; }
+  .challenge-lobby-copy { width: 68%; }
+  .challenge-lobby-feature > img { width: 73%; right: -10%; opacity: .82; }
+  .challenge-play-ticker { min-width: 106px; padding: 5px 6px; right: 8px; bottom: 8px; }
+}
+#challengeResultOverlay .challenge-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#challengeResultOverlay > div { padding: clamp(12px, 3vw, 30px); }
+#challengeResultOverlay h3 { font-size: clamp(1.5rem, 4vw, 3.4rem); }
+#challengeResultOverlay .quick-result-actions { gap: 6px; margin-top: 10px; }
+#challengeResultOverlay .quick-result-actions button { padding: 7px 11px; min-height: 32px; font-size: 13px; }
+#challengeClock { font-variant-numeric: tabular-nums; }
+body[data-screen=race] #raceScreen[data-challenge] .race-typing .typing-viewport { height: clamp(64px, 10dvh, 108px); }
+.challenge-score-form {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-block: 14px;
+  padding: 12px; border: 1px solid var(--line); border-radius: 12px;
+}
+.challenge-score-form p { flex: 0 0 100%; margin: 0; font-size: 13px; }
+.challenge-score-form input { min-width: 0; width: min(24ch, 100%); }
+.challenge-scores-list { padding-inline-start: 28px; }
+.challenge-scores-list li { padding: 5px; border-bottom: 1px solid var(--line); }
+.challenge-scores-list li > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
 #dashboardScreen .race-controls-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); margin: 0; }
 #dashboardScreen .setup-panel { min-width: 0; padding: 8px 12px; gap: 0; }
 #dashboardScreen .panel-title { margin: 0 0 6px; }

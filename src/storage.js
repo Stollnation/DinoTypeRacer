@@ -3,7 +3,7 @@ import { CONFIG, STARTER_PASSAGES } from "./config.js";
 export function defaultState() {
   return {
     version: 1,
-    profile: { name: "", characterId: "nova", calibration: null },
+    profile: { name: "", characterId: "nova", calibration: null, challengeTypingMode: "strict" },
     playerProfiles: {},
     profileLibraries: {},
     entitlements: { creator: false },

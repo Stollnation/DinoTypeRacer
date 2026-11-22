@@ -6,6 +6,8 @@ import { bindHelp } from "./help.js";
 import { clearFireworks, fireworksMotionReduced, playFireworks, prepareFireworksAudio } from "./victory-fireworks.js";
 import { choosePassage, exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
+import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, TimedChallenge } from "./timed-challenge.js";
+import { checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
 import { calculatePlace, createAiRacers, updateAi } from "./ai.js";
 import { GameAudio } from "./audio.js";
 import { CHAMPIONSHIP_RACES, championshipStandings, highestSelectableLevel, rankRace } from "./championship.js";
@@ -58,6 +60,8 @@ let mistakeReviewResult = null;
 let mistakeScope = "race";
 let raceFinishTimer = null;
 let quickIntroResult = null;
+let latestChallengeScore = null;
+let challengeBoardRequest = 0;
 let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
@@ -71,9 +75,11 @@ let customRacerSource = null;
 let customRacerCanvas = null;
 let customRacerGuideImage = null;
 const customRacerObjectUrls = new Map();
+const challengeOwnerTokens = new Map();
 
 async function init() {
   const startInHelp = screenFromHash() === "help";
+  const startInChallenge = screenFromHash() === "challenge";
   manifest = await fetch("assets/manifest.json").then((response) => response.json());
   await installBundledPassages();
   ensureStarterCampaign();
@@ -90,6 +96,7 @@ async function init() {
   renderCharacters();
   renderPassageList();
   if (startInHelp) showHelp({ historyMode: "replace", from: null });
+  else if (startInChallenge && data.profile.name) showChallengeLobby({ historyMode: "replace" });
   else showDashboard({ historyMode: "replace" });
   $("#helpButton").disabled = false;
 }
@@ -193,6 +200,14 @@ function loadActiveProfileLibrary(name = data.profile.name) {
   }
 }
 
+function setActiveProfileName(name) {
+  const key = profileKey(name);
+  if (key !== profileKey()) {
+    data.profile.challengeTypingMode = data.playerProfiles?.[key]?.profile?.challengeTypingMode === "flow" ? "flow" : "strict";
+  }
+  data.profile.name = name;
+}
+
 function profileSnapshot(name = data.profile.name) {
   return {
     profile: { ...data.profile, name },
@@ -219,7 +234,7 @@ function loadPlayerProfile(name) {
   if (data.profile.name) saveActivePlayerProfile(data.profile.name);
   const saved = data.playerProfiles[profileKey(requestedName)];
   if (!saved) return false;
-  data.profile = { name: requestedName, characterId: "nova", calibration: null, ...(saved.profile || {}), name: requestedName };
+  data.profile = { characterId: "nova", calibration: null, challengeTypingMode: "strict", ...(saved.profile || {}), name: requestedName };
   data.records = Array.isArray(saved.records) ? structuredClone(saved.records) : [];
   data.bestReplay = saved.bestReplay ? structuredClone(saved.bestReplay) : null;
   data.progressionByCategory = saved.progressionByCategory ? structuredClone(saved.progressionByCategory) : {};
@@ -540,6 +555,7 @@ function restoreScreenFromHistory(screen) {
     }
     if (currentScreen === "race" && screen !== "race" && raceActive) pauseRace(true);
     if (screen === "dashboard") showDashboard({ preserveRace: raceActive });
+    else if (screen === "challenge") showChallengeLobby();
     else if (screen === "library") showLibrary();
     else if (screen === "results") showFinishScreen();
     else if (screen === "podium" && championship?.rounds?.length) renderPodium();
@@ -560,9 +576,18 @@ function restoreScreenFromHistory(screen) {
   }
 }
 
+function discardTimedChallenge() {
+  if (!raceActive || !raceSetup?.timedChallenge) return false;
+  cancelAnimationFrame(raceFrame);
+  raceActive = false;
+  raceSession = null;
+  return true;
+}
+
 function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   cancelAnimationFrame(calibrationFrame);
   clearTimeout(raceFinishTimer);
+  if (discardTimedChallenge()) preserveRace = false;
   if (!preserveRace) raceActive = false;
   $("#dashboardName").textContent = data.profile.name || "Racer";
   $("#dashboardPlayerName").value = data.profile.name || "";
@@ -575,6 +600,11 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   const needsStartingPace = !needsPlayerName && !data.profile.calibration;
   const needsSettingsConfirmation = !needsPlayerName && Boolean(data.profile.calibration) && data.profile.setupSettingsConfirmed !== true;
   $("#dashboardScreen").classList.toggle("awaiting-player-name", needsPlayerName);
+  $("#dashboardScreen").classList.remove("nickname-entered");
+  $("#nicknameStepHint").classList.toggle("hidden", !needsPlayerName);
+  $("#nicknameAvailability").classList.add("hidden");
+  $("#dashboardPlayerName").removeAttribute("aria-invalid");
+  $("#dashboardPlayerName").removeAttribute("aria-describedby");
   $("#dashboardScreen").classList.toggle("awaiting-starting-pace", needsStartingPace);
   $("#dashboardScreen").classList.toggle("awaiting-settings-confirmation", needsSettingsConfirmation);
   $("#startingPaceLabel").textContent = needsStartingPace ? "Set your starting pace" : "Your starting pace";
@@ -584,7 +614,7 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   $("#settingsConfirmRow").classList.toggle("hidden", !needsSettingsConfirmation);
   $("#confirmGameSettingsButton").classList.toggle("attention-blink", needsSettingsConfirmation);
   const gameSettingsPanel = $("#aiPaceSlider").closest(".setup-panel");
-  const calibrationCard = $("#startingPaceButton").closest(".calibration-card");
+  const calibrationControls = $("#startingPaceButton").closest(".calibration-card-content");
   $$("#dashboardScreen button, #dashboardScreen select, #dashboardScreen input, #dashboardScreen textarea").forEach((control) => {
     const inProfile = Boolean(control.closest("#dashboardProfileForm"));
     const inCalibration = Boolean(control.closest(".calibration-card"));
@@ -595,7 +625,7 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
     else if (needsSettingsConfirmation) allowed = inProfile || inCalibration || inSettings;
     control.disabled = !allowed && !control.closest(".browser-transfer") && control.id !== "joinDailyRace";
   });
-  calibrationCard.setAttribute("aria-disabled", needsPlayerName ? "true" : "false");
+  calibrationControls.setAttribute("aria-disabled", String(needsPlayerName));
   $("#startChampionshipButton").classList.toggle("attention-blink", Boolean(data.profile.calibration) && data.profile.setupSettingsConfirmed === true && data.profile.startHintSeen !== true);
   const challengePassages = activeChallengePassages();
   const levels = Math.max(1, Math.ceil(challengePassages.length / CHAMPIONSHIP_RACES));
@@ -670,6 +700,10 @@ function raceTypingInstruction() {
   return keys.length ? `Practice keys in bold: ${keys.map((key) => key.toLocaleUpperCase()).join(", ")}` : "Type the highlighted text";
 }
 
+function raceTypingModeHint() {
+  return raceSession.ignoreMistakes ? "Flow mode: missed letters turn red." : "Strict mode: use Backspace to fix mistakes.";
+}
+
 function renderTyping(card, session) {
   const copy = $(".typing-copy", card);
   if (copy._typingText !== session.text) {
@@ -698,14 +732,21 @@ function renderTyping(card, session) {
   }
   const characters = copy._typingCharacters || [];
   const focusKeys = card.id === "raceTyping" ? new Set(raceSetup?.focusKeys || activeFocusKeys()) : new Set();
-  characters.forEach((node, index) => {
+  const incremental = card.id === "raceTyping" && raceSetup?.timedChallenge && copy._typingSession === session;
+  const from = incremental ? Math.min(copy._typingIndex, session.index) : 0;
+  const to = incremental ? Math.min(characters.length, Math.max(copy._typingIndex, session.index) + 1) : characters.length;
+  for (let index = from; index < to; ++index) {
+    const node = characters[index];
     node.className = `typing-char ${index < session.index ? "typed" : "remaining"}`;
     if (session.missedIndices?.has(index)) node.classList.add("missed");
     if (index >= session.index && focusKeys.has(normalizedFocusKey(node.textContent))) node.classList.add("focus-key");
     if (index === session.index && !session.finished) node.classList.add("current");
     if (index === session.index && session.errorChar) node.classList.add("error");
-  });
-  requestAnimationFrame(() => {
+  }
+  copy._typingIndex = session.index;
+  copy._typingSession = session;
+  cancelAnimationFrame(copy._typingFrame);
+  copy._typingFrame = requestAnimationFrame(() => {
     const viewport = $(".typing-viewport", card);
     const current = characters[Math.min(session.index, Math.max(0, characters.length - 1))];
     const target = current ? Math.max(0, current.offsetTop - viewport.clientHeight * .42) : 0;
@@ -740,6 +781,27 @@ function selectRaceTypingMode(mode) {
   persist();
   syncRaceTypingModeButtons();
   toast(`${mode === "flow" ? "Flow" : "Strict"} race mode selected.`);
+}
+
+function challengeTypingMode() {
+  return data.profile.challengeTypingMode === "flow" ? "flow" : "strict";
+}
+
+function syncChallengeTypingMode() {
+  const mode = challengeTypingMode();
+  $$("[data-challenge-mode]").forEach(button => {
+    button.setAttribute("aria-pressed", String(button.dataset.challengeMode === mode));
+  });
+  $("#challengeModeHint").textContent = mode === "flow"
+    ? "Wrong letters turn red and you can keep typing."
+    : "Fix a wrong letter with Backspace before moving on.";
+}
+
+function selectChallengeTypingMode(mode) {
+  if (!data.profile.name || !["strict", "flow"].includes(mode)) return;
+  data.profile.challengeTypingMode = mode;
+  persist();
+  syncChallengeTypingMode();
 }
 
 function renderCharacters() {
@@ -1038,7 +1100,7 @@ function startIntroRace(name) {
   cancelAnimationFrame(calibrationFrame);
   if (data.profile.name && profileKey(data.profile.name) !== profileKey(requestedName)) saveActiveProfileLibrary(data.profile.name);
   if (data.profile.name) saveActivePlayerProfile(data.profile.name);
-  data.profile.name = requestedName;
+  setActiveProfileName(requestedName);
   loadActiveProfileLibrary(requestedName);
   persist();
   startCalibration();
@@ -1175,30 +1237,47 @@ function registerPlayerKeyHit(now) {
   racePlayer.keyHitAt = now;
 }
 
-function startRace({ roundNumberOverride = null } = {}) {
+function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) {
+  if (timedChallenge && !data.profile.name) { showDashboard(); $("#dashboardPlayerName").focus(); return; }
+  if (timedChallenge && raceActive && !raceSetup?.timedChallenge) {
+    toast("Finish your paused race before starting the Challenge.");
+    return;
+  }
   clearTimeout(raceFinishTimer);
-  if (!championship) { startChampionship(); return; }
-  const roundNumber = roundNumberOverride || championship.rounds.length + 1;
-  const passageId = championship.passageIds[roundNumber - 1];
-  const passage = championship.quickIntro ? championship.quickPassage : (campaignPassage(passageId) || choosePassage(data.passages, selectedPassageId));
+  if (!timedChallenge && !championship) { startChampionship(); return; }
+  const roundNumber = timedChallenge ? 1 : (roundNumberOverride || championship.rounds.length + 1);
+  const passageId = timedChallenge ? CHALLENGE_PASSAGE.id : championship.passageIds[roundNumber - 1];
+  const quickIntro = !timedChallenge && Boolean(championship.quickIntro);
+  const passage = timedChallenge ? CHALLENGE_PASSAGE : quickIntro ? championship.quickPassage : (campaignPassage(passageId) || choosePassage(data.passages, selectedPassageId));
   if (!passage) { toast("Enable at least one passage before racing."); return; }
-  if (!championship.quickIntro) selectedPassageId = passage.id;
+  if (!timedChallenge && !quickIntro) selectedPassageId = passage.id;
   const baseline = adjustedAiBaseline(data.profile.calibration?.wpm || 35, data.settings.aiPaceOffset);
-  const { mode, difficulty } = championship;
-  const fallbackTrackIndex = (((championship.level || 1) - 1) * CHAMPIONSHIP_RACES + roundNumber - 1) % manifest.tracks.length;
-  const track = manifest.tracks.find((item) => item.id === championship.trackIds?.[roundNumber - 1]) || manifest.tracks[fallbackTrackIndex];
+  const { mode, difficulty } = timedChallenge ? { mode: "challenge", difficulty: "normal" } : championship;
+  const fallbackTrackIndex = timedChallenge ? 0 : (((championship.level || 1) - 1) * CHAMPIONSHIP_RACES + roundNumber - 1) % manifest.tracks.length;
+  const requestedTrack = timedChallenge ? "prehistoric-wilds" : championship.trackIds?.[roundNumber - 1];
+  const track = manifest.tracks.find((item) => item.id === requestedTrack) || manifest.tracks[fallbackTrackIndex];
+  const playerCharacterId = manifest.characters.some((item) => item.id === data.profile.characterId) ? data.profile.characterId : (manifest.characters.find((item) => item.id === "nova") || manifest.characters[0]).id;
   renderer.setTrack(track.id);
-  raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: activeFocusKeys(), quickIntro: Boolean(championship.quickIntro) };
-  raceSession = new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
-  raceRacers = createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId: data.profile.characterId });
-  racePlayer = { id: "player", name: championship.playerName || data.profile.name, characterId: data.profile.characterId, progress: 0, finishTime: null };
+  raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: timedChallenge ? [] : activeFocusKeys(), quickIntro, timedChallenge, attemptId: timedChallenge ? globalThis.crypto?.randomUUID?.() : null };
+  raceSession = timedChallenge ? new TimedChallenge(challengeTypingMode()) : new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
+  raceRacers = timedChallenge ? [] : createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId });
+  racePlayer = { id: "player", name: (timedChallenge ? data.profile.name : championship.playerName || data.profile.name) || "Racer", characterId: playerCharacterId, progress: 0, finishTime: null };
   const modeName = mode === "adaptive" ? "Adaptive" : mode === "ghost" ? "Personal Best" : `${difficulty[0].toUpperCase() + difficulty.slice(1)} Fixed`;
-  $("#raceModeLabel").textContent = championship.quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
-  $("#raceTitle").textContent = passage.source ? `${passage.title} - ${passage.source}` : passage.title;
+  $("#raceModeLabel").textContent = timedChallenge ? `One-minute Challenge - ${track.displayName}` : quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
+  $("#raceTitle").textContent = !timedChallenge && passage.source ? `${passage.title} - ${passage.source}` : passage.title;
+  $("#raceScreen").toggleAttribute("data-challenge", timedChallenge);
   $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = "100%"; $("#raceProgress").textContent = "0";
-  const typingModeHint = data.settings.raceTypingMode === "flow" ? "Flow mode: missed letters turn red." : "Strict mode: use Backspace to fix mistakes.";
+  const typingModeHint = raceTypingModeHint();
   $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${typingModeHint} ${raceTypingInstruction()}` : `The race starts after the countdown - ${typingModeHint}`;
-  $("#raceLastResultsButton").classList.toggle("hidden", !lastRaceResult);
+  $("#raceLastResultsButton").classList.toggle("hidden", timedChallenge || !lastRaceResult);
+  $("#raceCanvas").setAttribute("aria-label", timedChallenge ? "Your dinosaur on the Challenge track" : "Five runners racing across a dinosaur track");
+  $("#racePlaceStat").classList.toggle("hidden", timedChallenge);
+  $("#challengeClockStat").classList.toggle("hidden", !timedChallenge);
+  $("#raceProgressStat").classList.toggle("hidden", timedChallenge);
+  $("#challengeClock").textContent = formatTime(CHALLENGE_SECONDS);
+  $("#racePauseButton").disabled = false;
+  $("#challengeResultOverlay").classList.add("hidden");
+  if (timedChallenge) latestChallengeScore = null;
   renderTyping($("#raceTyping"), raceSession);
   $("#raceTyping").classList.add("typing-locked");
   $("#raceTyping").setAttribute("aria-disabled", "true");
@@ -1206,7 +1285,7 @@ function startRace({ roundNumberOverride = null } = {}) {
   raceActive = true; racePausedAt = null;
   audio.playMusic({ restart: true });
   raceCountdownEnd = performance.now() + 3000;
-  if (roundNumber === 1 && !data.profile.firstRaceHelpSeen && !championship.quickIntro) {
+  if (!timedChallenge && roundNumber === 1 && !data.profile.firstRaceHelpSeen && !quickIntro) {
     raceCountdownEnd = performance.now() + 600000;
     document.getElementById("firstRaceHelpDialog")?.showModal();
   }
@@ -1228,7 +1307,7 @@ function beginStartingPace() {
   if (profileKey(name) !== profileKey(data.profile.name)) {
     const previousName = data.profile.name;
     if (previousName) saveActivePlayerProfile(previousName);
-    data.profile.name = name;
+    setActiveProfileName(name);
     loadActiveProfileLibrary(name);
     persist();
   }
@@ -1244,7 +1323,18 @@ function updateRace(now) {
     renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: true });
     raceFrame = requestAnimationFrame(updateRace); return;
   }
-  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceTyping").classList.remove("typing-locked"); $("#raceTyping").setAttribute("aria-disabled", "false"); $("#raceHint").textContent = `${data.settings.raceTypingMode === "flow" ? "Flow mode active." : "Strict mode active."} ${raceTypingInstruction()}`.trim(); audio.play("start"); $("#raceTyping").focus(); }
+  if (!$("#countdown").classList.contains("hidden")) { $("#countdown").classList.add("hidden"); $("#raceTyping").classList.remove("typing-locked"); $("#raceTyping").setAttribute("aria-disabled", "false"); $("#raceHint").textContent = `${raceTypingModeHint()} ${raceTypingInstruction()}`; audio.play("start"); $("#raceTyping").focus({ preventScroll: raceSetup.timedChallenge }); }
+  if (raceSetup.timedChallenge) {
+    const remaining = raceSession.remaining(now);
+    if (remaining <= 0) { finishTimedChallenge(now); return; }
+    $("#challengeClock").textContent = formatTime(Math.ceil(remaining));
+    $("#raceWpm").textContent = Math.round(raceSession.wpm(now));
+    $("#raceAccuracy").textContent = `${Math.round(raceSession.accuracy * 100)}%`;
+    racePlayer.progress = raceSession.trackProgress;
+    renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
+    raceFrame = requestAnimationFrame(updateRace);
+    return;
+  }
   const elapsed = Math.max(0, (now - raceStartTime) / 1000);
   raceRacers.forEach((racer) => updateAi(racer, elapsed, raceSession.text.length));
   racePlayer.progress = raceSession.progress;
@@ -1266,16 +1356,134 @@ function pauseRace(force = false) {
   } else if (!force) resumeRace();
 }
 
+function finishTimedChallenge(now) {
+  raceActive = false;
+  cancelAnimationFrame(raceFrame);
+  audio.pauseMusic({ reset: true });
+  audio.play("finish");
+  const accuracy = raceSession.totalKeystrokes ? `${Math.round(raceSession.accuracy * 100)}%` : "—";
+  latestChallengeScore = raceSession.correctKeystrokes ? { correct: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes, profile: profileKey(), posted: false } : null;
+  $("#useChallengePace").disabled = !latestChallengeScore || raceSession.scoreWpm < 5;
+  $("#challengeClock").textContent = "0:00";
+  $("#raceWpm").textContent = $("#challengeResultWpm").textContent = Number(raceSession.scoreWpm.toFixed(1));
+  $("#raceAccuracy").textContent = $("#challengeResultAccuracy").textContent = accuracy;
+  $("#raceHint").textContent = "Challenge complete";
+  $("#raceTyping").setAttribute("aria-disabled", "true");
+  $("#racePauseButton").disabled = true;
+  racePlayer.progress = raceSession.trackProgress;
+  renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
+  $("#challengeResultOverlay").classList.remove("hidden");
+  $("#challengePlayAgain").focus({ preventScroll: true });
+  if (raceSession.totalKeystrokes && raceSetup.attemptId) {
+    void recordChallengePlay(raceSetup.attemptId).then(saved => {
+      if (saved && currentScreen === "challenge") void refreshChallengeScores("lobby");
+    }).catch(() => { /* The online board never substitutes a browser-only count. */ });
+  }
+}
+
+function showChallengeLobby({ historyMode = "push" } = {}) {
+  if (!data.profile.name) {
+    showDashboard({ historyMode });
+    $("#dashboardPlayerName").focus({ preventScroll: true });
+    return;
+  }
+  if (raceActive && !raceSetup?.timedChallenge) {
+    toast("Finish your paused race before opening the Challenge.");
+    return;
+  }
+  discardTimedChallenge();
+  const racer = manifest.characters.find(item => item.id === data.profile.characterId)
+    || manifest.characters.find(item => item.id === "nova") || manifest.characters[0];
+  $("#challengeRacerPortrait").src = racer.portrait || racer.animations.idle.file;
+  syncChallengeTypingMode();
+  showScreen("challenge", { historyMode });
+  $("#challengeLobbyTitle").focus({ preventScroll: true });
+  void refreshChallengeScores("lobby");
+}
+
+function useChallengePace() {
+  const score = latestChallengeScore;
+  if (!score || score.correct < 25 || score.profile !== profileKey() || !data.profile.name) return;
+  const wpm = score.correct / 5;
+  data.profile.calibration = { playerName: data.profile.name, wpm, accuracy: score.correct / score.attempts, date: new Date().toISOString(), method: "challenge" };
+  persist();
+  showDashboard();
+  toast(`Starting pace saved: ${Number(wpm.toFixed(1))} WPM`);
+}
+
+async function refreshChallengeScores(view = "dialog") {
+  const request = ++challengeBoardRequest;
+  const lobby = view === "lobby";
+  const status = lobby ? $("#challengeLobbyScoresStatus") : $("#challengeScoresStatus");
+  const list = lobby ? $("#challengeLobbyScoresList") : $("#challengeScoresList");
+  if (lobby) $("#challengePlayCount").textContent = "—";
+  status.textContent = "Loading shared scores…";
+  list.replaceChildren();
+  try {
+    const { records, plays } = await fetchChallengeBoard();
+    if (request !== challengeBoardRequest) return;
+    if (lobby) $("#challengePlayCount").textContent = plays.toLocaleString();
+    status.textContent = records.length ? "" : "No scores posted yet.";
+    for (const { nickname, wpm, accuracy } of records.slice(0, lobby ? 8 : 50)) {
+      const row = document.createElement("li");
+      const layout = document.createElement("span");
+      const name = document.createElement("strong");
+      const score = document.createElement("span");
+      name.textContent = nickname;
+      score.textContent = `${wpm} WPM · ${Number((accuracy * 100).toFixed(1))}% accuracy`;
+      layout.append(name, score);
+      row.append(layout);
+      list.append(row);
+    }
+  } catch {
+    if (request === challengeBoardRequest) status.textContent = "Online Challenge scores are unavailable here. You can still race.";
+  }
+}
+
+function openChallengeScores() {
+  const score = currentScreen === "race" && raceSetup?.timedChallenge ? latestChallengeScore : null;
+  const form = $("#challengeScoreForm");
+  form.classList.toggle("hidden", !score || score.posted);
+  form.reset();
+  $("#postChallengeScore").disabled = Boolean(score?.posting);
+  $("#challengePostStatus").textContent = score?.posted ? "Your score was posted online." : "";
+  $("#challengeScoresDialog").showModal();
+  void refreshChallengeScores();
+}
+
+async function submitChallengeScore(event) {
+  event.preventDefault();
+  const score = latestChallengeScore;
+  if (!score || score.posting || score.posted || currentScreen !== "race" || !raceSetup?.timedChallenge) return;
+  const status = $("#challengePostStatus");
+  const button = $("#postChallengeScore");
+  status.textContent = "Posting your score…";
+  score.posting = button.disabled = true;
+  try {
+    await postChallengeScore({ ...score, nickname: $("#challengeNickname").value, ownerId: challengeOwnerForProfile(data.profile.name) });
+    score.posted = true;
+    if (latestChallengeScore !== score) return;
+    $("#challengeScoreForm").classList.add("hidden");
+    status.textContent = "Your score was posted online.";
+    void refreshChallengeScores();
+  } catch (error) {
+    if (latestChallengeScore === score) status.textContent = error.message || "Could not post your score online.";
+  } finally {
+    score.posting = false;
+    if (latestChallengeScore === score) button.disabled = false;
+  }
+}
+
 function resumeRace() {
   if (racePausedAt === null) return;
   const pausedFor = performance.now() - racePausedAt;
   raceStartTime += pausedFor; raceCountdownEnd += pausedFor; raceSession.startTime += pausedFor;
-  racePausedAt = null; $("#pauseOverlay").classList.add("hidden"); $("#raceHint").textContent = raceTypingInstruction(); $("#raceTyping").focus();
+  racePausedAt = null; $("#pauseOverlay").classList.add("hidden"); $("#raceHint").textContent = `${raceTypingModeHint()} ${raceTypingInstruction()}`; $("#raceTyping").focus({ preventScroll: raceSetup.timedChallenge });
   audio.playMusic();
 }
 
 function debugFinishRaceFirst() {
-  if (!raceActive || currentScreen !== "race" || !raceSession) return;
+  if (!raceActive || currentScreen !== "race" || !raceSession || raceSetup?.timedChallenge) return;
   const now = performance.now();
   const targetWpm = Math.max(5, data.profile.calibration?.wpm || 35);
   const simulatedSeconds = Math.max(8, (raceSession.text.length / 5) / targetWpm * 60);
@@ -1514,7 +1722,7 @@ function commitDashboardProfile(name, { toastMessage = true } = {}) {
   const previousName = data.profile.name;
   if (previousName && profileKey(previousName) !== profileKey(name)) saveActiveProfileLibrary(previousName);
   if (previousName) saveActivePlayerProfile(previousName);
-  data.profile.name = name;
+  setActiveProfileName(name);
   if (data.profile.calibration) data.profile.calibration.playerName = name;
   loadActiveProfileLibrary(name);
   $("#dashboardName").textContent = name;
@@ -1523,7 +1731,44 @@ function commitDashboardProfile(name, { toastMessage = true } = {}) {
   if (toastMessage) toast(`Player saved: ${name}`);
 }
 
-function saveDashboardProfile(event) { event.preventDefault(); commitDashboardProfile($("#dashboardPlayerName").value.trim()); }
+function challengeOwnerForProfile(name) {
+  const key = `dino-challenge-owner:${profileKey(name)}`;
+  if (challengeOwnerTokens.has(key)) return challengeOwnerTokens.get(key);
+  let token;
+  try { token = localStorage.getItem(key); } catch { /* Private browsing can block storage. */ }
+  if (!isChallengeToken(token)) token = globalThis.crypto?.randomUUID?.();
+  if (token) {
+    challengeOwnerTokens.set(key, token);
+    try { localStorage.setItem(key, token); } catch { /* The current page still works. */ }
+  }
+  return token;
+}
+
+async function saveDashboardProfile(event) {
+  event.preventDefault();
+  const input = $("#dashboardPlayerName");
+  const button = $("#saveDashboardPlayer");
+  const status = $("#nicknameAvailability");
+  const name = input.value.trim();
+  if (!name || button.disabled) return;
+  button.disabled = true;
+  button.textContent = "Checking…";
+  const newPlayer = !data.profile.name;
+  const available = await checkChallengeNickname(name, challengeOwnerForProfile(name)).catch(() => null);
+  button.disabled = false;
+  button.textContent = "Save player";
+  if (currentScreen !== "dashboard" || input.value.trim() !== name) return;
+  if (available === false) {
+    status.textContent = "Name already taken on the Challenge leaderboard. Try another nickname.";
+    status.classList.remove("hidden");
+    input.setAttribute("aria-invalid", "true");
+    input.setAttribute("aria-describedby", "nicknameAvailability");
+    input.focus({ preventScroll: true });
+    return;
+  }
+  commitDashboardProfile(name);
+  if (newPlayer && data.profile.name) $("#startingPaceButton").focus({ preventScroll: true });
+}
 
 function confirmGameSettings() {
   if (!data.profile.calibration) { toast("Set your starting pace first."); return; }
@@ -1594,6 +1839,7 @@ function deleteProfileFromPicker(name) {
   if (profileKey(data.profile.name) === key) {
     data.profile.name = "";
     data.profile.calibration = null;
+    data.profile.challengeTypingMode = "strict";
   }
   persist();
   renderProfilePicker();
@@ -1872,6 +2118,7 @@ function toggleMusic() {
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1800); }
 
 function handleTypingKey(event) {
+  if ($("#challengeScoresDialog").open) return;
   if (currentScreen === "results" && event.key === "Enter" && event.target === $("#nextRaceButton") && !$("#nextRaceButton").classList.contains("hidden") && !$("#nextRaceButton").disabled) { event.preventDefault(); nextRace(); return; }
   if (!["calibration", "race"].includes(currentScreen) || event.ctrlKey || event.metaKey || event.altKey || event.target.matches("input, textarea, select")) return;
   if (event.key === "Escape" && currentScreen === "race") { event.preventDefault(); pauseRace(); return; }
@@ -1899,6 +2146,13 @@ function bindEvents() {
   bindClassroom({ passages: () => data.passages.filter(p => p.enabled !== false), racers: () => manifest.characters, nickname: () => $("#dashboardPlayerName").value.trim() || data.profile.name });
   bindBrowserTransfer({ getState: () => structuredClone(data), readAsset: loadCustomRacerAsset, writeAsset: saveCustomRacerAsset, removeAsset: deleteCustomRacerAsset, commit: saveState });
   $("#dashboardProfileForm").addEventListener("submit", saveDashboardProfile);
+  $("#dashboardPlayerName").addEventListener("input", event => {
+    $("#dashboardScreen").classList.toggle("nickname-entered", Boolean(event.target.value.trim()));
+    $("#nicknameAvailability").classList.add("hidden");
+    event.target.removeAttribute("aria-invalid");
+    event.target.removeAttribute("aria-describedby");
+  });
+  $("#challengeScoreForm").addEventListener("submit", submitChallengeScore);
   $("#manualPaceForm").addEventListener("submit", saveManualPace);
   $("#passageForm").addEventListener("submit", savePassage);
   $("#campaignForm").addEventListener("submit", saveCampaignEditor);
@@ -1959,7 +2213,13 @@ function bindEvents() {
     if (action === "accept-runner") { data.profile.characterId = previewCharacterId; persist(); renderCharacters(); $("#runnerDialog").close(); toast(`Racer selected: ${manifest.characters.find((item) => item.id === previewCharacterId)?.displayName || previewCharacterId}.`); }
     if (action === "pause") pauseRace();
     if (action === "resume") resumeRace();
-    if (action === "restart-race") startRace();
+    if (action === "restart-race") startRace({ timedChallenge: raceSetup?.timedChallenge });
+    if (action === "start-timed-challenge") startRace({ timedChallenge: true });
+    if (action === "challenge-lobby") showChallengeLobby();
+    if (action === "use-challenge-pace") useChallengePace();
+    if (action === "challenge-back") { showDashboard(); $("#challengeButton").focus({ preventScroll: true }); }
+    if (action === "open-challenge-scores") openChallengeScores();
+    if (action === "close-challenge-scores") $("#challengeScoresDialog").close();
     if (action === "debug-finish-first") debugFinishRaceFirst();
     if (action === "continue-after-quick-race") continueAfterQuickRace();
     if (action === "dashboard") openRaceControls();
@@ -1993,6 +2253,7 @@ function bindEvents() {
     const edit = event.target.closest("[data-edit-passage]")?.dataset.editPassage; if (edit && !event.target.closest("button")) editPassage(edit);
     const calibrationChoice = event.target.closest("[data-calibration-mode]")?.dataset.calibrationMode; if (calibrationChoice) selectCalibrationMode(calibrationChoice);
     const raceMode = event.target.closest("[data-race-mode]")?.dataset.raceMode; if (raceMode) selectRaceTypingMode(raceMode);
+    const challengeMode = event.target.closest("[data-challenge-mode]")?.dataset.challengeMode; if (challengeMode) selectChallengeTypingMode(challengeMode);
     const scope = event.target.closest("[data-mistake-scope]")?.dataset.mistakeScope; if (scope) { mistakeScope = scope; renderMistakeStats(mistakeReviewResult, mistakeScope); }
     const use = event.target.closest("[data-use-passage]")?.dataset.usePassage; if (use) { const passage = data.passages.find((item) => item.id === use); selectedPassageId = use; if (passage?.category) selectedPassageCategory = passage.category; persist(); toast("Race passage selected."); renderPassageList(); }
     const duplicate = event.target.closest("[data-duplicate-passage]")?.dataset.duplicatePassage; if (duplicate) { const source = data.passages.find((item) => item.id === duplicate); const copy = { ...source, id: `passage-${Date.now()}`, title: `${source.title} Copy` }; data.passages.push(copy); persist(); editPassage(copy.id); toast("Passage duplicated."); }

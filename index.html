@@ -64,8 +64,9 @@
         <section class="screen dashboard-screen" id="dashboardScreen" aria-labelledby="dashboardTitle">
           <div class="dashboard-head">
             <div class="ready-player-card">
-              <form id="dashboardProfileForm" class="ready-profile" autocomplete="off"><span class="profile-step-badge" aria-hidden="true">1</span><label for="dashboardPlayerName">Racer nickname</label><input id="dashboardPlayerName" name="gameAliasReady" type="text" maxlength="24" size="22" autocomplete="section-game-ready nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Switch player</button><button type="button" id="joinDailyRace" class="secondary compact" hidden>Join race</button></form>
-              <div class="ready-secondary-actions"><span>Progress saves on this browser.</span><a class="support-email-link" href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Support</a></div>
+              <form id="dashboardProfileForm" class="ready-profile" autocomplete="off"><span class="profile-step-badge" aria-hidden="true">1</span><label for="dashboardPlayerName">Racer nickname</label><input id="dashboardPlayerName" name="gameAliasReady" type="text" maxlength="24" size="22" autocomplete="section-game-ready nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" id="saveDashboardPlayer" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Switch player</button><button type="button" id="joinDailyRace" class="secondary compact" hidden>Join race</button></form>
+              <p id="nicknameStepHint" class="nickname-step-hint hidden"><span aria-hidden="true">↑</span> Enter a nickname, then save it to unlock Starting Pace or the Challenge.</p>
+              <p id="nicknameAvailability" class="nickname-availability hidden" role="status"></p>
             </div>
             <div class="baseline-card calibration-card">
               <span class="calibration-step-badge" aria-hidden="true">2</span>
@@ -80,12 +81,16 @@
                   <button class="inline-button calibration-complete-only" data-action="open-leaderboard">Leaderboard</button>
                 </div>
               </div>
+              <div class="pace-challenge-action">
+                <button id="challengeButton" class="challenge-button" type="button" data-action="challenge-lobby" aria-describedby="challengeDescription">Challenge</button>
+                <small id="challengeDescription">60 seconds · No pace test needed</small>
+              </div>
             </div>
           </div>
 
           <div class="setup-grid race-controls-grid">
             <div class="setup-panel">
-              <div class="panel-title"><span>3</span><div><h3>Game Settings</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div>
+              <div class="settings-heading"><div class="panel-title"><span>3</span><div><h3>Game Settings</h3><p>Set rival pace and choose how race mistakes behave.</p></div></div><div class="settings-support"><span>Progress saves on this browser.</span><a class="support-email-link" href="mailto:JonIstoll@hotmail.com?subject=Dino%20Type%20Racer%20support">Support</a></div></div>
               <div class="ai-pace-control">
                 <div class="pace-settings">
                 <div class="ai-pace-readout"><div><span>Computer difficulty</span><strong id="aiPaceDescription">Matched</strong></div><output id="aiPaceValue" for="aiPaceSlider">0%</output></div>
@@ -132,14 +137,61 @@
           </section></details>
         </section>
 
+        <section class="screen challenge-screen" id="challengeScreen" aria-labelledby="challengeLobbyTitle">
+          <div class="challenge-lobby-head">
+            <div><p class="eyebrow">Dino Type Racer · Time Trial</p><h2 id="challengeLobbyTitle" tabindex="-1">The 60-Second Challenge</h2></div>
+            <button class="secondary compact" type="button" data-action="challenge-back">← Race Setup</button>
+          </div>
+          <div class="challenge-lobby-grid">
+            <aside class="challenge-lobby-board" aria-labelledby="challengeLadderTitle">
+              <p class="eyebrow">Global Leaderboard</p><h3 id="challengeLadderTitle">Fastest Typers</h3>
+              <p id="challengeLobbyScoresStatus" role="status"></p>
+              <ol id="challengeLobbyScoresList" class="challenge-scores-list"></ol>
+            </aside>
+            <div class="challenge-lobby-feature">
+              <div class="challenge-lobby-copy">
+                <p class="eyebrow">One minute. One mystery.</p>
+                <h3>The Case of the<br />Missing Biscuit</h3>
+                <p>Holmes has a suspect. Watson has crumbs. You have 60 seconds.</p>
+                <fieldset class="challenge-mode-picker">
+                  <legend>Typing mode</legend>
+                  <div>
+                    <button type="button" data-challenge-mode="strict" aria-pressed="true" aria-describedby="challengeModeHint">Strict</button>
+                    <button type="button" data-challenge-mode="flow" aria-pressed="false" aria-describedby="challengeModeHint">Flow</button>
+                  </div>
+                  <p id="challengeModeHint" role="status">Fix a wrong letter with Backspace before moving on.</p>
+                </fieldset>
+                <button id="launchChallengeButton" class="primary" type="button" data-action="start-timed-challenge">Start Challenge</button>
+              </div>
+              <img id="challengeRacerPortrait" alt="" />
+              <div class="challenge-play-ticker"><strong id="challengePlayCount">—</strong><span>completed worldwide</span></div>
+            </div>
+          </div>
+        </section>
+
         <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
           <div class="race-topline">
             <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
-            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div><span>Place</span><strong id="racePlace">1 / 5</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="race-controls">Race setup</button><button class="secondary compact" data-action="pause">Pause</button><button class="secondary compact race-help-button" id="raceHelpButton" type="button" data-action="help" aria-label="Game help" title="Pause and open Game Help">?</button></div>
+            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div id="racePlaceStat"><span>Place</span><strong id="racePlace">1 / 5</strong></div><div id="challengeClockStat" class="hidden"><span>Time left</span><strong id="challengeClock" role="timer">1:00</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="race-controls">Race setup</button><button class="secondary compact" id="racePauseButton" data-action="pause">Pause</button><button class="secondary compact race-help-button" id="raceHelpButton" type="button" data-action="help" aria-label="Game help" title="Pause and open Game Help">?</button></div>
           </div>
-          <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="quick-result-overlay hidden" id="quickResultOverlay"><div><p class="eyebrow">Quick race complete</p><h3 id="quickResultTitle">Nice run!</h3><p id="quickResultSummary"></p><div class="quick-result-grid"><span><b id="quickResultWpm">0</b> WPM</span><span><b id="quickResultAccuracy">100%</b> accuracy</span><span><b id="quickResultPlace">1st</b> place</span></div><p class="quick-sync-status" id="quickLeaderboardStatus">Saving leaderboard score...</p><div class="quick-result-actions"><button class="secondary" data-action="open-leaderboard">Leaderboard</button><button class="primary" data-action="continue-after-quick-race">Continue to races</button></div></div></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><!-- QA shortcut, if needed again: <button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button> --></div></div></div>
+          <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="quick-result-overlay hidden" id="quickResultOverlay"><div><p class="eyebrow">Quick race complete</p><h3 id="quickResultTitle">Nice run!</h3><p id="quickResultSummary"></p><div class="quick-result-grid"><span><b id="quickResultWpm">0</b> WPM</span><span><b id="quickResultAccuracy">100%</b> accuracy</span><span><b id="quickResultPlace">1st</b> place</span></div><p class="quick-sync-status" id="quickLeaderboardStatus">Saving leaderboard score...</p><div class="quick-result-actions"><button class="secondary" data-action="open-leaderboard">Leaderboard</button><button class="primary" data-action="continue-after-quick-race">Continue to races</button></div></div></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><!-- QA shortcut, if needed again: <button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button> --></div></div>
+            <div class="quick-result-overlay hidden" id="challengeResultOverlay" role="region" aria-labelledby="challengeResultTitle">
+            <div>
+              <p class="eyebrow">60-second Challenge</p><h3 id="challengeResultTitle">Time’s up!</h3>
+              <div class="quick-result-grid challenge-result-grid">
+                <span><b id="challengeResultWpm">0</b> WPM</span><span><b id="challengeResultAccuracy">—</b> accuracy</span>
+              </div>
+              <div class="quick-result-actions">
+                <button class="secondary" id="useChallengePace" type="button" data-action="use-challenge-pace">Use as starting pace</button>
+                <button class="secondary" type="button" data-action="open-challenge-scores">Challenge scores</button>
+                <button class="secondary" type="button" data-action="challenge-lobby">Challenge lobby</button>
+                <button class="primary" id="challengePlayAgain" type="button" data-action="start-timed-challenge">Try again</button>
+              </div>
+            </div>
+            </div>
+          </div>
           <div class="typing-card race-typing focus-ring" id="raceTyping" tabindex="0" aria-label="Race typing area">
-            <div class="typing-meta"><span id="raceHint">The race starts after the countdown</span><span><strong id="raceProgress">0</strong>% complete</span></div>
+            <div class="typing-meta"><span id="raceHint">The race starts after the countdown</span><span id="raceProgressStat"><strong id="raceProgress">0</strong>% complete</span></div>
             <div class="typing-viewport"><p class="typing-copy"><span class="typed"></span><span class="cursor"></span><span class="error"></span><span class="remaining"></span></p></div>
           </div>
         </section>
@@ -185,6 +237,21 @@
           <h3 id="leaderboardDialogTitle">Leaderboard</h3>
           <p id="leaderboardSummary" class="leaderboard-summary"></p>
           <div class="leaderboard-table" id="leaderboardTable"></div>
+        </dialog>
+        <dialog id="challengeScoresDialog" class="leaderboard-dialog" aria-labelledby="challengeScoresTitle">
+          <button class="dialog-close" type="button" data-action="close-challenge-scores" aria-label="Close">&times;</button>
+          <p class="eyebrow">The Case of the Missing Biscuit</p>
+          <h3 id="challengeScoresTitle">Global Challenge Leaderboard</h3>
+          <p>One minute, one passage. The fastest score per nickname is shown.</p>
+          <form id="challengeScoreForm" class="challenge-score-form hidden" autocomplete="off">
+            <p id="challengePublicNote">Posting is optional. Your game nickname, speed, and accuracy will be public. Don’t use your real name.</p>
+            <label for="challengeNickname">Public nickname</label>
+            <input id="challengeNickname" name="challengeAlias" type="text" inputmode="text" autocomplete="off" maxlength="24" minlength="2" placeholder="e.g. CleverRaptor" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-describedby="challengePublicNote" required />
+            <button class="primary compact" id="postChallengeScore" type="submit">Post score</button>
+          </form>
+          <p id="challengePostStatus" role="status"></p>
+          <p id="challengeScoresStatus" role="status"></p>
+          <ol id="challengeScoresList" class="challenge-scores-list"></ol>
         </dialog>
         <dialog id="playerPickerDialog" class="player-picker-dialog" aria-labelledby="playerPickerTitle">
           <button class="dialog-close" data-action="close-profile-picker" aria-label="Close player picker">&times;</button>
@@ -299,7 +366,7 @@
                   <p>Race dinosaurs by typing the passage on screen. Every correct key moves your racer closer to the finish.</p>
                   <ol>
                     <li><strong>Save a nickname.</strong> On <strong>Race setup</strong>, enter a <strong>Racer nickname</strong> (up to 24 characters) and click <strong>Save player</strong>. Use <strong>Switch player</strong> if you already have a saved profile on this browser.</li>
-                    <li><strong>Set starting pace.</strong> Choose <strong>Set starting pace</strong>. Pick <strong>Strict</strong> or <strong>Flow</strong>, then type. Your first keystroke starts the 60-second timer. If you know your speed, enter 5–250 WPM under <strong>Know your speed?</strong> and click <strong>Use this pace &amp; skip test</strong>.</li>
+                    <li><strong>Set starting pace.</strong> Take the pace test, enter a pace you already know, or play the red <strong>Challenge</strong> and choose <strong>Use as starting pace</strong> at the finish. In the pace test, your first keystroke starts the 60-second timer.</li>
                     <li><strong>Confirm Game Settings.</strong> Review rival speed, typing mode, and sound. Click <strong>OK — use these settings</strong> the first time. You can change them later.</li>
                     <li><strong>Pick a dinosaur.</strong> Keep your current racer or open <strong>More racers</strong>, pick a dinosaur to preview it, and click <strong>Accept runner</strong>.</li>
                     <li><strong>Hit the track.</strong> Pick a group in the <strong>Passages</strong> dropdown, choose an unlocked level, and click <strong>Start Level</strong>. Read the first-race reminder and choose <strong>OK, start race</strong> if it appears. Wait for 3–2–1 to finish before typing.</li>
@@ -309,6 +376,10 @@
 
               <section class="help-section" aria-labelledby="help-typing">
                 <h3 id="help-typing" tabindex="-1">Typing &amp; controls</h3>
+                <details data-help-entry><summary>Try the one-minute Challenge</summary><div>
+                  <p>Save a racer nickname, then select the red <strong>Challenge</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
+                  <p>Open <strong>Challenge scores</strong> after a run to post it under a public game nickname. This board is shared across computers when the online service is available, and is separate from regular race scores. No scores are posted without your action.</p>
+                </div></details>
                 <details data-help-entry><summary>What is the difference between Strict and Flow?</summary><div>
                   <p>In either mode, type the passage as shown, including capital letters, punctuation, and spaces. When the countdown ends, click the typing area if it doesn't have focus.</p>
                   <ul><li><strong>Strict:</strong> A wrong key marks the current character red and stops progress. Press <kbd>Backspace</kbd> once to clear it, then type the expected character. The mistake still counts, but extra keys pressed while the error is waiting for correction don't add more mistakes. Backspace doesn't rewind correctly typed text.</li>
