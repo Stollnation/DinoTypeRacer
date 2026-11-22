@@ -431,6 +431,7 @@ function renderGlobalNavigation() {
 }
 
 function screenTitle(name) {
+  if (name === "dashboard") return `${CONFIG.title} — Free Dinosaur Typing Race Game`;
   return `${CONFIG.title} - ${name[0].toUpperCase()}${name.slice(1)}`;
 }
 
