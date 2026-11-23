@@ -65,7 +65,7 @@
           <div class="dashboard-head">
             <div class="ready-player-card">
               <form id="dashboardProfileForm" class="ready-profile" autocomplete="off"><span class="profile-step-badge" aria-hidden="true">1</span><label for="dashboardPlayerName">Racer nickname</label><input id="dashboardPlayerName" name="gameAliasReady" type="text" maxlength="24" size="22" autocomplete="section-game-ready nickname" data-lpignore="true" data-1p-ignore="true" data-form-type="other" inputmode="text" autocapitalize="words" spellcheck="false" required /><button class="secondary compact" id="saveDashboardPlayer" type="submit">Save player</button><button class="secondary compact" type="button" data-action="load-profile">Switch player</button><button type="button" id="joinDailyRace" class="secondary compact" hidden>Join race</button></form>
-              <p id="nicknameStepHint" class="nickname-step-hint hidden"><span aria-hidden="true">↑</span> Enter a nickname, then save it to unlock Starting Pace or the Challenge.</p>
+              <p id="nicknameStepHint" class="nickname-step-hint hidden"><span aria-hidden="true">↑</span> Save your nickname to try the Daily Challenge or set your starting pace.</p>
               <p id="nicknameAvailability" class="nickname-availability hidden" role="status"></p>
             </div>
             <div class="baseline-card calibration-card">
@@ -82,7 +82,7 @@
                 </div>
               </div>
               <div class="pace-challenge-action">
-                <button id="challengeButton" class="challenge-button" type="button" data-action="challenge-lobby" aria-describedby="challengeDescription">Challenge</button>
+                <button id="challengeButton" class="challenge-button" type="button" data-action="challenge-lobby" aria-describedby="challengeDescription">DAILY CHALLENGE</button>
                 <small id="challengeDescription">60 seconds · No pace test needed</small>
               </div>
             </div>
@@ -162,9 +162,15 @@
                   </div>
                   <p id="challengeModeHint" role="status">Fix a wrong letter with Backspace before moving on.</p>
                 </fieldset>
+                <div class="challenge-rival-setting">
+                  <label for="challengeRivalWpm">Rival pace (WPM)</label>
+                  <input id="challengeRivalWpm" type="number" min="5" max="300" step="1" required inputmode="numeric" value="40" aria-describedby="challengeRivalHint" />
+                  <small id="challengeRivalHint">Set the speed of the four computer racers.</small>
+                </div>
                 <button id="launchChallengeButton" class="primary" type="button" data-action="start-timed-challenge">Start Challenge</button>
               </div>
               <img id="challengeRacerPortrait" alt="" />
+              <span id="challengeRacerBadge" class="challenge-racer-badge"></span>
               <div class="challenge-play-ticker"><strong id="challengePlayCount">—</strong><span>completed worldwide</span></div>
             </div>
           </div>
@@ -381,7 +387,7 @@
                   <p>Race dinosaurs by typing the passage on screen. Every correct key moves your racer closer to the finish.</p>
                   <ol>
                     <li><strong>Save a nickname.</strong> On <strong>Race setup</strong>, enter a <strong>Racer nickname</strong> (up to 24 characters) and click <strong>Save player</strong>. Use <strong>Switch player</strong> if you already have a saved profile on this browser.</li>
-                    <li><strong>Set starting pace.</strong> Take the pace test, enter a pace you already know, or play the red <strong>Challenge</strong> and choose <strong>Use as starting pace</strong> at the finish. In the pace test, your first keystroke starts the 60-second timer.</li>
+                    <li><strong>Set starting pace.</strong> Take the pace test, enter a pace you already know, or play the red <strong>DAILY CHALLENGE</strong> and choose <strong>Use as starting pace</strong> at the finish. In the pace test, your first keystroke starts the 60-second timer.</li>
                     <li><strong>Confirm Game Settings.</strong> Review rival speed, typing mode, and sound. Click <strong>OK — use these settings</strong> the first time. You can change them later.</li>
                     <li><strong>Pick a dinosaur.</strong> Keep your current racer or open <strong>More racers</strong>, pick a dinosaur to preview it, and click <strong>Accept runner</strong>.</li>
                     <li><strong>Hit the track.</strong> Pick a group in the <strong>Passages</strong> dropdown, choose an unlocked level, and click <strong>Start Level</strong>. Read the first-race reminder and choose <strong>OK, start race</strong> if it appears. Wait for 3–2–1 to finish before typing.</li>
@@ -392,8 +398,9 @@
               <section class="help-section" aria-labelledby="help-typing">
                 <h3 id="help-typing" tabindex="-1">Typing &amp; controls</h3>
                 <details data-help-entry><summary>Try the one-minute Challenge</summary><div>
+                  <p>Your Challenge racer rotates; the portrait shows who you will play this time. Set <strong>Rival pace (WPM)</strong> to race four computer dinos at your target speed. This setting is saved for your player on this browser. It does not affect your score or regular championship racer.</p>
                   <p>Leave <strong>Rotate Sherlock stories</strong> unchecked for the original Missing Biscuit mystery every time. Check it for a shuffled set of twenty original mysteries. Your racer remembers the choice and the story cycle on this browser. The track scenery rotates independently either way.</p>
-                  <p>Save a racer nickname, then select the red <strong>Challenge</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
+                  <p>Save a racer nickname, then select the red <strong>DAILY CHALLENGE</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
                   <p>Open <strong>Challenge scores</strong> after a run to post it under a public game nickname. This board is shared across computers when the online service is available, and is separate from regular race scores. No scores are posted without your action.</p>
                   <p>Correct letters move your dino. The dino starts at an estimated 40 WPM. After every word, the game uses your recent typing pace (up to the last four words), the distance left, and the time remaining to size the next strides. Even a sudden sprint leaves visible track ahead until the buzzer. At 55 seconds, even mid-word, the game checks your last ten seconds of typing and adjusts your stride for the distance left. Stop typing and your dino settles, except for a glide in the final five seconds. You always cross at the buzzer; only typing earns WPM. <strong>Keystroke accuracy</strong> counts wrong keys even if you fix them. <strong>Text accuracy</strong> shows how much of the text you attempted was correct at the end; text you never reached doesn’t count against you.</p>
                 </div></details>

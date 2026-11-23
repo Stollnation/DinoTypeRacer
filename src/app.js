@@ -8,7 +8,7 @@ import { choosePassage, exportPassages, importNumberedInspiredPassages, importPa
 import { TypingSession, ordinal } from "./typing.js";
 import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, CHALLENGE_STORIES, formatChallengeAccuracy, makeChallengeTrackPicker, takeChallengeStory, TimedChallenge } from "./timed-challenge.js";
 import { checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
-import { calculatePlace, createAiRacers, updateAi } from "./ai.js";
+import { calculatePlace, createAiRacers, createChallengeRivals, updateAi, updateChallengeRivals, validRivalWpm } from "./ai.js";
 import { GameAudio } from "./audio.js";
 import { CHAMPIONSHIP_RACES, championshipStandings, highestSelectableLevel, rankRace } from "./championship.js";
 import { RaceRenderer } from "./renderer.js";
@@ -59,6 +59,19 @@ let raceFinishTimer = null;
 let latestChallengeScore = null;
 const challengeBoardRequests = new Map();
 const nextChallengeTrack = makeChallengeTrackPicker();
+const nextChallengeRacer = makeChallengeTrackPicker({ key: "dino:challenge-racer-cycle:v1" });
+let challengePreviewRacer = null;
+function upcomingChallengeRacer() {
+  const roster = manifest.characters.filter(c => !c.custom);
+  if (!challengePreviewRacer) {
+    const id = nextChallengeRacer(roster);
+    challengePreviewRacer = roster.find(c => c.id === id);
+  }
+  return challengePreviewRacer;
+}
+function challengeRivalPace() {
+  return validRivalWpm(data.profile.challengeRivalWpm) ? Number(data.profile.challengeRivalWpm) : 40;
+}
 let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
@@ -202,6 +215,8 @@ function setActiveProfileName(name) {
   if (key !== profileKey()) {
     data.profile.challengeTypingMode = data.playerProfiles?.[key]?.profile?.challengeTypingMode === "flow" ? "flow" : "strict";
     const saved = data.playerProfiles?.[key]?.profile;
+    data.profile.challengeLobbySeen = saved?.challengeLobbySeen === true;
+    data.profile.challengeRivalWpm = validRivalWpm(saved?.challengeRivalWpm) ? Number(saved.challengeRivalWpm) : 40;
     data.profile.rotateChallengeStories = saved?.rotateChallengeStories === true;
     data.profile.challengeStoryCycle = [...(Array.isArray(saved?.challengeStoryCycle) ? saved.challengeStoryCycle : [])];
   }
@@ -607,9 +622,8 @@ function showDashboard({ preserveRace = false, historyMode = "push" } = {}) {
   $("#dashboardPlayerName").removeAttribute("aria-describedby");
   $("#dashboardScreen").classList.toggle("awaiting-starting-pace", needsStartingPace);
   $("#dashboardScreen").classList.toggle("awaiting-settings-confirmation", needsSettingsConfirmation);
-  $("#startingPaceLabel").textContent = needsStartingPace ? "Set your starting pace" : "Your starting pace";
   $("#startingPaceButton").textContent = needsStartingPace ? "Set starting pace" : "Change pace";
-  $("#startingPaceButton").classList.toggle("starting-pace-flash", needsStartingPace);
+  $("#challengeButton").classList.toggle("daily-challenge-cue", !needsPlayerName && data.profile.challengeLobbySeen !== true);
   $$(".calibration-complete-only").forEach((button) => button.classList.toggle("hidden", !data.profile.calibration));
   $("#settingsConfirmRow").classList.toggle("hidden", !needsSettingsConfirmation);
   $("#confirmGameSettingsButton").classList.toggle("attention-blink", needsSettingsConfirmation);
@@ -1246,6 +1260,7 @@ function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) 
     toast("Finish your paused race before starting the Challenge.");
     return;
   }
+  if (timedChallenge && currentScreen === "challenge" && !$("#challengeRivalWpm").reportValidity()) return;
   clearTimeout(raceFinishTimer);
   if (!timedChallenge && !championship) { startChampionship(); return; }
   const roundNumber = timedChallenge ? 1 : (roundNumberOverride || championship.rounds.length + 1);
@@ -1261,16 +1276,17 @@ function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) 
   const fallbackTrackIndex = timedChallenge ? 0 : (((championship.level || 1) - 1) * CHAMPIONSHIP_RACES + roundNumber - 1) % manifest.tracks.length;
   const requestedTrack = timedChallenge ? nextChallengeTrack(manifest.tracks) : championship.trackIds?.[roundNumber - 1];
   const track = manifest.tracks.find((item) => item.id === requestedTrack) || manifest.tracks[fallbackTrackIndex];
-  const playerCharacterId = manifest.characters.some((item) => item.id === data.profile.characterId) ? data.profile.characterId : (manifest.characters.find((item) => item.id === "nova") || manifest.characters[0]).id;
+  const playerCharacterId = timedChallenge ? upcomingChallengeRacer().id : manifest.characters.some((item) => item.id === data.profile.characterId) ? data.profile.characterId : (manifest.characters.find((item) => item.id === "nova") || manifest.characters[0]).id;
+  if (timedChallenge) challengePreviewRacer = null;
   renderer.setTrack(track.id);
   raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: timedChallenge ? [] : activeFocusKeys(), quickIntro, timedChallenge, attemptId: timedChallenge ? globalThis.crypto?.randomUUID?.() : null };
   raceSession = timedChallenge
     ? new TimedChallenge(challengeTypingMode(), { passage })
     : new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
-  raceRacers = timedChallenge ? [] : createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId });
+  raceRacers = timedChallenge ? createChallengeRivals(manifest.characters, playerCharacterId, challengeRivalPace()) : createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId });
   racePlayer = { id: "player", name: (timedChallenge ? data.profile.name : championship.playerName || data.profile.name) || "Racer", characterId: playerCharacterId, progress: 0, finishTime: null };
   const modeName = mode === "adaptive" ? "Adaptive" : mode === "ghost" ? "Personal Best" : `${difficulty[0].toUpperCase() + difficulty.slice(1)} Fixed`;
-  $("#raceModeLabel").textContent = timedChallenge ? `One-minute Challenge - ${track.displayName}` : quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
+  $("#raceModeLabel").textContent = timedChallenge ? `One-minute Challenge - ${track.displayName} · You: ${renderer.character(playerCharacterId).displayName} · Rivals: ${challengeRivalPace()} WPM` : quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
   $("#raceTitle").textContent = !timedChallenge && passage.source ? `${passage.title} - ${passage.source}` : passage.title;
   $("#raceScreen").toggleAttribute("data-challenge", timedChallenge);
   $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = timedChallenge ? "—" : "100%"; $("#raceProgress").textContent = "0";
@@ -1280,7 +1296,7 @@ function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) 
   const typingModeHint = raceTypingModeHint();
   $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${typingModeHint} ${raceTypingInstruction()}` : `The race starts after the countdown - ${typingModeHint}`;
   $("#raceLastResultsButton").classList.toggle("hidden", timedChallenge || !lastRaceResult);
-  $("#raceCanvas").setAttribute("aria-label", timedChallenge ? "Your dinosaur on the Challenge track" : "Five runners racing across a dinosaur track");
+  $("#raceCanvas").setAttribute("aria-label", timedChallenge ? `Your dinosaur in the bottom lane and four rivals pacing at ${challengeRivalPace()} WPM` : "Five runners racing across a dinosaur track");
   $("#racePlaceStat").classList.toggle("hidden", timedChallenge);
   $("#challengeClockStat").classList.toggle("hidden", !timedChallenge);
   $("#raceProgressStat").classList.toggle("hidden", timedChallenge);
@@ -1341,7 +1357,8 @@ function updateRace(now) {
     $("#raceWpm").textContent = Math.round(raceSession.wpm(now));
     renderChallengeAccuracy();
     racePlayer.progress = raceSession.trackProgress(now);
-    renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
+    updateChallengeRivals(raceRacers, CHALLENGE_SECONDS - remaining, raceSession.track.stride);
+    renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
     raceFrame = requestAnimationFrame(updateRace);
     return;
   }
@@ -1390,7 +1407,8 @@ function finishTimedChallenge(now) {
   $("#raceTyping").setAttribute("aria-disabled", "true");
   $("#racePauseButton").disabled = true;
   racePlayer.progress = raceSession.trackProgress(now);
-  renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
+  updateChallengeRivals(raceRacers, CHALLENGE_SECONDS, raceSession.track.stride);
+  renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
   $("#challengeResultOverlay").classList.remove("hidden");
   $("#challengePlayAgain").focus({ preventScroll: true });
   if (raceSession.totalKeystrokes && raceSetup.attemptId) {
@@ -1411,12 +1429,17 @@ function showChallengeLobby({ historyMode = "push" } = {}) {
     return;
   }
   discardTimedChallenge();
-  const racer = manifest.characters.find(item => item.id === data.profile.characterId)
-    || manifest.characters.find(item => item.id === "nova") || manifest.characters[0];
+  const racer = upcomingChallengeRacer();
   $("#challengeRacerPortrait").src = racer.portrait || racer.animations.idle.file;
+  $("#challengeRacerBadge").textContent = `Your racer: ${racer.displayName}`;
+  $("#challengeRivalWpm").value = challengeRivalPace();
   syncChallengeStoryChoice();
   syncChallengeTypingMode();
   showScreen("challenge", { historyMode });
+  if (!data.profile.challengeLobbySeen) {
+    data.profile.challengeLobbySeen = true;
+    persist();
+  }
   $("#challengeLobbyTitle").focus({ preventScroll: true });
   void refreshChallengeScores("lobby");
 }
@@ -1750,7 +1773,7 @@ async function saveDashboardProfile(event) {
     return;
   }
   commitDashboardProfile(name);
-  if (newPlayer && data.profile.name) $("#startingPaceButton").focus({ preventScroll: true });
+  if (newPlayer && data.profile.name) $("#challengeButton").focus({ preventScroll: true });
 }
 
 function confirmGameSettings() {
@@ -1822,7 +1845,9 @@ function deleteProfileFromPicker(name) {
   if (profileKey(data.profile.name) === key) {
     data.profile.name = "";
     data.profile.calibration = null;
+    data.profile.challengeLobbySeen = false;
     data.profile.challengeTypingMode = "strict";
+    data.profile.challengeRivalWpm = 40;
     data.profile.rotateChallengeStories = false;
     data.profile.challengeStoryCycle = [];
   }
@@ -2124,6 +2149,11 @@ function handleTypingKey(event) {
 }
 
 function bindEvents() {
+  $("#challengeRivalWpm").addEventListener("change", event => {
+    if (!validRivalWpm(event.target.value)) return;
+    data.profile.challengeRivalWpm = Number(event.target.value);
+    persist();
+  });
   $("#rotateChallengeStories").addEventListener("change", event => {
     data.profile.rotateChallengeStories = event.target.checked;
     persist();

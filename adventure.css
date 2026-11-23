@@ -270,10 +270,7 @@ body[data-screen=dashboard] .awaiting-settings-confirmation :is(.runner-control-
 #restoreBackupDialog { max-width:min(92vw,480px); }
 body[data-screen=dashboard] .awaiting-player-name .calibration-card :is(.calibration-step-badge, .calibration-card-content) { filter: grayscale(.9); opacity: .48; }
 body[data-screen=dashboard] .awaiting-player-name .ready-profile { border-color: #ffd35b; box-shadow: 0 0 0 5px #f9941c3d,0 5px 16px #172d2235; }
-body[data-screen=dashboard] .awaiting-starting-pace .calibration-card { cursor: pointer; border-color: #ffd35b; box-shadow: inset 0 0 0 2px #fff0a8,0 0 0 5px #f9941c55,0 10px 24px #172d2255; }
 body[data-screen=dashboard] .awaiting-settings-confirmation .race-controls-grid > .setup-panel:first-child { border-color: #ffd35b; box-shadow: inset 0 0 0 2px #fff0a8,0 0 0 5px #f9941c55,0 10px 24px #172d2255; }
-.starting-pace-flash { color: #fff7c8 !important; border: 2px solid #ffdc64 !important; border-radius: 9px; padding: 6px 10px !important; background: #f07110 !important; animation: starting-pace-pulse 1.35s ease-in-out infinite; }
-@keyframes starting-pace-pulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 0 #ffd35b00; } 50% { transform: scale(1.06); box-shadow: 0 0 0 10px #ffd35b55; } }
 
 /* A deliberate, centered choice rather than a secondary form buried above the test. */
 body[data-screen=calibration] .test-screen.active { max-width: 1120px; margin: 22px auto; padding: 20px; }
@@ -296,7 +293,6 @@ body[data-screen][data-theme] { background-color: var(--adventure-scenery-tint);
 body[data-screen][data-theme] .wordmark-icon,body[data-screen][data-theme] .baseline-card.calibration-card,body[data-screen][data-theme] .launch-bar,body[data-screen][data-theme] .panel-title > span { background: var(--adventure-blue); }
 body[data-screen][data-theme] .primary,body[data-screen][data-theme] .topbar-donate { background: linear-gradient(color-mix(in srgb, var(--adventure-action) 76%, white), var(--adventure-action)); border-color: color-mix(in srgb, var(--adventure-action) 75%, #522900); box-shadow: inset 0 2px 0 #ffffff66, 0 3px 0 color-mix(in srgb, var(--adventure-action) 66%, #422200), 0 5px 12px #61371024; }
 body[data-screen][data-theme] .ready-intro { border-color: var(--adventure-blue); background: linear-gradient(8deg, color-mix(in srgb, var(--adventure-blue) 86%, #24150a), var(--adventure-blue)); }
-body[data-screen][data-theme] .starting-pace-flash { background: var(--adventure-action) !important; border-color: var(--adventure-accent) !important; }
 body[data-screen][data-theme] input[type=range] { accent-color: var(--adventure-action); }
 @media (max-width:720px) { body[data-screen=calibration] .manual-pace-form { grid-template-columns: 1fr; text-align: center; } }
 
@@ -396,10 +392,6 @@ body[data-screen=dashboard] #dashboardScreen .calibration-card {
 #dashboardScreen .calibration-card-actions .inline-button {
   min-height: 30px; margin: 0; padding: 4px 6px; border-radius: 8px; font-size: 12px; line-height: 1.2; white-space: nowrap;
 }
-#dashboardScreen #startingPaceButton {
-  border: 1px solid #ffffff80; padding-inline: 9px; background: #ffffff20; text-decoration: none;
-}
-#dashboardScreen #startingPaceButton:not(:disabled):hover { background: #ffffff39; }
 #dashboardScreen .pace-challenge-action {
   grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 9px;
   cursor: auto; text-align: start;
@@ -411,6 +403,14 @@ body[data-screen] #dashboardScreen .challenge-button {
 body[data-screen] #dashboardScreen .challenge-button:hover { background: #921a20; }
 body[data-screen] #dashboardScreen .challenge-button:disabled { opacity: .47; cursor: not-allowed; }
 body[data-screen] #dashboardScreen .challenge-button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+#dashboardScreen .daily-challenge-cue:enabled { box-shadow: 0 0 0 2px #ffe2a1; }
+@media (prefers-reduced-motion: no-preference) {
+  #dashboardScreen .daily-challenge-cue:enabled { animation: daily-challenge-pulse 1.65s ease-in-out infinite; }
+  @keyframes daily-challenge-pulse {
+    0%, 100% { box-shadow: 0 0 0 1px #ffe2a155; }
+    50% { box-shadow: 0 0 0 3px #ffe2a1, 0 0 12px 3px #ffc05788; }
+  }
+}
 #dashboardScreen .pace-challenge-action small { color: inherit; font-size: 11px; }
 #dashboardScreen :is(.nickname-step-hint, .nickname-availability) { margin: 1px 0 0 37px; font-size: 11px; font-weight: 750; text-align: start; }
 #dashboardScreen .nickname-step-hint > span { color: #96330c; font-size: 14px; }
@@ -448,7 +448,7 @@ body[data-screen=challenge] .challenge-lobby-board h3 { margin: 0 0 10px; font-s
 .challenge-lobby-board .challenge-scores-list li::marker { color: #975123; font-weight: 850; }
 .challenge-lobby-board .challenge-scores-list li:first-child { background: #f5dfaa; border-radius: 6px 6px 0 0; }
 .challenge-lobby-feature {
-  position: relative; isolation: isolate; display: flex; align-items: center; min-height: 436px;
+  position: relative; isolation: isolate; display: flex; flex-wrap: wrap; align-items: center; container-type: inline-size; min-height: 436px;
   padding: clamp(18px,3.4vw,48px); overflow: hidden; border: 2px solid #c5a66c; border-radius: 17px;
   background: linear-gradient(90deg,#0c2c30 1%,#0c2c30e8 36%,#0c2c3050 72%,#0c2c3070),
     url('assets/ui/adventure-valley.png') 60% 50% / cover;
@@ -476,8 +476,14 @@ body[data-screen=challenge] .challenge-lobby-copy h3 {
 .challenge-mode-picker button[aria-pressed="true"] { background: #ffe0a1; color: #102d2e; }
 .challenge-mode-picker button:focus-visible { outline: 2px solid #fff5dc; outline-offset: 2px; }
 .challenge-mode-picker p { margin: 6px 0 0; min-height: 2.6em; color: #fff5dc; font-size: .8rem; line-height: 1.3; }
+.challenge-rival-setting { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 10px; max-width: 100%; margin: 0 0 14px; color: #fff5dc; }
+.challenge-rival-setting label { font-size: .9rem; font-weight: 800; color: #fff5dc; }
+.challenge-rival-setting input { width: 4.5rem; min-width: 0; min-height: 36px; padding: 4px 8px; border: 1px solid #c7aa75; border-radius: 8px; background: #fff5dc; color: #102d2e; font: inherit; font-weight: 800; }
+.challenge-rival-setting small { flex-basis: 100%; line-height: 1.3; color: #fff5dc; }
+.challenge-racer-badge { position: absolute; right: 12px; top: 12px; z-index: 2; padding: 4px 9px; border-radius: 8px; background: #102d2e; color: #fff5dc; font-size: .78rem; font-weight: 750; }
+@media (max-width: 540px) { .challenge-racer-badge { top: 8px; right: 8px; } }
 .challenge-lobby-feature > img {
-  position: absolute; z-index: 1; width: 65%; height: 92%; right: -3%; bottom: 4%;
+  position: absolute; z-index: 1; width: 55%; height: 84%; right: clamp(16px, 2.5%, 28px); bottom: 8%;
   object-fit: contain; filter: drop-shadow(0 15px 16px #051b22bb); pointer-events: none;
 }
 .challenge-play-ticker {
@@ -490,8 +496,16 @@ body[data-screen=challenge] .challenge-lobby-copy h3 {
   .challenge-lobby-grid { grid-template-columns: minmax(0,1fr); }
   .challenge-lobby-feature { order: -1; min-height: 330px; }
   .challenge-lobby-copy { width: 68%; }
-  .challenge-lobby-feature > img { width: 73%; right: -10%; opacity: .82; }
   .challenge-play-ticker { min-width: 106px; padding: 5px 6px; right: 8px; bottom: 8px; }
+}
+/* When the card itself is narrow, give the art a row instead of clipping
+   the snout or putting the typing controls on top of the rider. */
+@container (max-width: 38rem) {
+  .challenge-lobby-copy { width: 100%; padding-block: 12px 0; }
+  .challenge-lobby-feature > img {
+    position: static; width: min(79%, 18rem); height: clamp(118px, 38cqi, 164px);
+    margin: 4px auto 32px;
+  }
 }
 #challengeResultOverlay .challenge-result-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); }
 #challengeResultOverlay .challenge-result-grid span { padding: clamp(5px, 1vw, 12px); font-size: clamp(.6rem, 1.3vw, .76rem); }

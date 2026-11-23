@@ -51,8 +51,7 @@ export function takeChallengeStory(profile, random = Math.random) {
 }
 
 // A browser-wide scenery rotation, independent of nicknames, scores and championships.
-export function makeChallengeTrackPicker({ storage = () => globalThis.localStorage, random = Math.random } = {}) {
-  const key = "dino:challenge-track-cycle:v1";
+export function makeChallengeTrackPicker({ storage = () => globalThis.localStorage, random = Math.random, key = "dino:challenge-track-cycle:v1" } = {}) {
   let visited = [];
   let store;
   try { store = storage(); } catch { /* Storage is optional. */ }

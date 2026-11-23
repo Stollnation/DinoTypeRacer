@@ -5,6 +5,38 @@ export class SeededRandom {
 
 function hashSeed(text) { let hash = 2166136261; for (const char of text) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619); } return hash >>> 0; }
 
+const charactersPerSecond = wpm => wpm * 5 / 60;
+
+export function validRivalWpm(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 5 && n <= 300;
+}
+
+export function createChallengeRivals(characters, playerId, wpm, random = Math.random) {
+  const others = characters.filter(c => !c.custom && c.id !== playerId);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+  return others.slice(0, 4).map((c, lane) => ({
+    id: `pace-${lane}`, characterId: c.id, name: c.displayName, targetWpm: wpm,
+    phase: lane * Math.PI / 2, virtualChars: 0, progress: 0,
+  }));
+}
+
+export function updateChallengeRivals(rivals, seconds, stride) {
+  // Same five-character WPM as championship AI. Each lane has a slight cadence;
+  // every complete ten-second cycle earns exactly its target pace.
+  for (const rival of rivals) {
+    const t = Math.max(0, Math.min(60, seconds));
+    const active = t + .32 * (Math.sin(t * Math.PI / 5 + rival.phase) - Math.sin(rival.phase));
+    const chars = charactersPerSecond(rival.targetWpm) * active;
+    // The timed course changes scale; only apply its new stride to new distance.
+    rival.progress = Math.min(1, rival.progress + Math.max(0, chars - rival.virtualChars) * stride);
+    rival.virtualChars = Math.max(chars, rival.virtualChars);
+  }
+}
+
 export function createAiRacers({ mode, baselineWpm, ratios, fixedRatio, passageId, bestReplay, characters, playerCharacterId = "nova" }) {
   const seed = hashSeed(`${mode}:${passageId}:${Math.round(baselineWpm * 10)}`);
   const botCharacters = characters.filter((character) => character.id !== playerCharacterId);
@@ -34,7 +66,7 @@ export function updateAi(racer, elapsed, textLength) {
     for (const sample of replay) { if (sample.t <= elapsed) point = sample; else break; }
     racer.progress = Math.min(1, point.p || 0);
   } else {
-    const cps = racer.targetWpm * 5 / 60;
+    const cps = charactersPerSecond(racer.targetWpm);
     const segmentLength = 0.75;
     const whole = Math.floor(elapsed / segmentLength);
     let chars = 0;
