@@ -6,7 +6,7 @@ import { bindHelp } from "./help.js";
 import { clearFireworks, fireworksMotionReduced, playFireworks, prepareFireworksAudio } from "./victory-fireworks.js";
 import { choosePassage, exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
-import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, formatChallengeAccuracy, TimedChallenge } from "./timed-challenge.js";
+import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, CHALLENGE_STORIES, formatChallengeAccuracy, makeChallengeTrackPicker, takeChallengeStory, TimedChallenge } from "./timed-challenge.js";
 import { checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
 import { calculatePlace, createAiRacers, updateAi } from "./ai.js";
 import { GameAudio } from "./audio.js";
@@ -58,6 +58,7 @@ let mistakeScope = "race";
 let raceFinishTimer = null;
 let latestChallengeScore = null;
 const challengeBoardRequests = new Map();
+const nextChallengeTrack = makeChallengeTrackPicker();
 let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
@@ -200,6 +201,9 @@ function setActiveProfileName(name) {
   const key = profileKey(name);
   if (key !== profileKey()) {
     data.profile.challengeTypingMode = data.playerProfiles?.[key]?.profile?.challengeTypingMode === "flow" ? "flow" : "strict";
+    const saved = data.playerProfiles?.[key]?.profile;
+    data.profile.rotateChallengeStories = saved?.rotateChallengeStories === true;
+    data.profile.challengeStoryCycle = [...(Array.isArray(saved?.challengeStoryCycle) ? saved.challengeStoryCycle : [])];
   }
   data.profile.name = name;
 }
@@ -783,6 +787,15 @@ function challengeTypingMode() {
   return data.profile.challengeTypingMode === "flow" ? "flow" : "strict";
 }
 
+function syncChallengeStoryChoice() {
+  const rotate = data.profile.rotateChallengeStories === true;
+  $("#rotateChallengeStories").checked = rotate;
+  $("#challengeStoryTitle").textContent = rotate ? "Sherlock’s shuffled casebook" : CHALLENGE_PASSAGE.title;
+  $("#challengeStoryTeaser").textContent = rotate
+    ? `One of ${CHALLENGE_STORIES.length} mysteries per race. No repeats until you’ve played them all.`
+    : "Holmes has a suspect. Watson has crumbs. You have 60 seconds.";
+}
+
 function syncChallengeTypingMode() {
   const mode = challengeTypingMode();
   $$("[data-challenge-mode]").forEach(button => {
@@ -1236,21 +1249,23 @@ function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) 
   clearTimeout(raceFinishTimer);
   if (!timedChallenge && !championship) { startChampionship(); return; }
   const roundNumber = timedChallenge ? 1 : (roundNumberOverride || championship.rounds.length + 1);
-  const passageId = timedChallenge ? CHALLENGE_PASSAGE.id : championship.passageIds[roundNumber - 1];
+  const story = timedChallenge ? takeChallengeStory(data.profile) : null;
+  if (timedChallenge && data.profile.rotateChallengeStories === true) persist();
+  const passageId = timedChallenge ? story.id : championship.passageIds[roundNumber - 1];
   const quickIntro = !timedChallenge && Boolean(championship.quickIntro);
-  const passage = timedChallenge ? CHALLENGE_PASSAGE : quickIntro ? championship.quickPassage : (campaignPassage(passageId) || choosePassage(data.passages, selectedPassageId));
+  const passage = timedChallenge ? story : quickIntro ? championship.quickPassage : (campaignPassage(passageId) || choosePassage(data.passages, selectedPassageId));
   if (!passage) { toast("Enable at least one passage before racing."); return; }
   if (!timedChallenge && !quickIntro) selectedPassageId = passage.id;
   const baseline = adjustedAiBaseline(data.profile.calibration?.wpm || 35, data.settings.aiPaceOffset);
   const { mode, difficulty } = timedChallenge ? { mode: "challenge", difficulty: "normal" } : championship;
   const fallbackTrackIndex = timedChallenge ? 0 : (((championship.level || 1) - 1) * CHAMPIONSHIP_RACES + roundNumber - 1) % manifest.tracks.length;
-  const requestedTrack = timedChallenge ? "prehistoric-wilds" : championship.trackIds?.[roundNumber - 1];
+  const requestedTrack = timedChallenge ? nextChallengeTrack(manifest.tracks) : championship.trackIds?.[roundNumber - 1];
   const track = manifest.tracks.find((item) => item.id === requestedTrack) || manifest.tracks[fallbackTrackIndex];
   const playerCharacterId = manifest.characters.some((item) => item.id === data.profile.characterId) ? data.profile.characterId : (manifest.characters.find((item) => item.id === "nova") || manifest.characters[0]).id;
   renderer.setTrack(track.id);
   raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: timedChallenge ? [] : activeFocusKeys(), quickIntro, timedChallenge, attemptId: timedChallenge ? globalThis.crypto?.randomUUID?.() : null };
   raceSession = timedChallenge
-    ? new TimedChallenge(challengeTypingMode())
+    ? new TimedChallenge(challengeTypingMode(), { passage })
     : new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
   raceRacers = timedChallenge ? [] : createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId });
   racePlayer = { id: "player", name: (timedChallenge ? data.profile.name : championship.playerName || data.profile.name) || "Racer", characterId: playerCharacterId, progress: 0, finishTime: null };
@@ -1365,7 +1380,7 @@ function finishTimedChallenge(now) {
   audio.pauseMusic({ reset: true });
   audio.play("finish");
   const accuracy = renderChallengeAccuracy();
-  latestChallengeScore = raceSession.correctKeystrokes ? { correct: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes, profile: profileKey(), posted: false } : null;
+  latestChallengeScore = raceSession.correctKeystrokes ? { correct: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes, passageId: raceSetup.passage.id, profile: profileKey(), posted: false } : null;
   $("#useChallengePace").disabled = !latestChallengeScore || raceSession.scoreWpm < 5;
   $("#challengeClock").textContent = "0:00";
   $("#raceWpm").textContent = $("#challengeResultWpm").textContent = Number(raceSession.scoreWpm.toFixed(1));
@@ -1399,6 +1414,7 @@ function showChallengeLobby({ historyMode = "push" } = {}) {
   const racer = manifest.characters.find(item => item.id === data.profile.characterId)
     || manifest.characters.find(item => item.id === "nova") || manifest.characters[0];
   $("#challengeRacerPortrait").src = racer.portrait || racer.animations.idle.file;
+  syncChallengeStoryChoice();
   syncChallengeTypingMode();
   showScreen("challenge", { historyMode });
   $("#challengeLobbyTitle").focus({ preventScroll: true });
@@ -1807,6 +1823,8 @@ function deleteProfileFromPicker(name) {
     data.profile.name = "";
     data.profile.calibration = null;
     data.profile.challengeTypingMode = "strict";
+    data.profile.rotateChallengeStories = false;
+    data.profile.challengeStoryCycle = [];
   }
   persist();
   renderProfilePicker();
@@ -2106,6 +2124,11 @@ function handleTypingKey(event) {
 }
 
 function bindEvents() {
+  $("#rotateChallengeStories").addEventListener("change", event => {
+    data.profile.rotateChallengeStories = event.target.checked;
+    persist();
+    syncChallengeStoryChoice();
+  });
   for (const event of ["click", "keydown"]) {
     document.addEventListener(event, prepareFireworksAudio, { capture: true, once: true });
   }

@@ -151,8 +151,9 @@
             <div class="challenge-lobby-feature">
               <div class="challenge-lobby-copy">
                 <p class="eyebrow">One minute. One mystery.</p>
-                <h3>The Case of the<br />Missing Biscuit</h3>
-                <p>Holmes has a suspect. Watson has crumbs. You have 60 seconds.</p>
+                <h3 id="challengeStoryTitle">The Case of the Missing Biscuit</h3>
+                <p id="challengeStoryTeaser">Holmes has a suspect. Watson has crumbs. You have 60 seconds.</p>
+                <label class="challenge-story-toggle"><input type="checkbox" id="rotateChallengeStories" /> Rotate Sherlock stories</label>
                 <fieldset class="challenge-mode-picker">
                   <legend>Typing mode</legend>
                   <div>
@@ -254,7 +255,7 @@
         </dialog>
         <dialog id="challengeScoresDialog" class="leaderboard-dialog" aria-labelledby="challengeScoresTitle">
           <button class="dialog-close" type="button" data-action="close-challenge-scores" aria-label="Close">&times;</button>
-          <p class="eyebrow">The Case of the Missing Biscuit</p>
+          <p class="eyebrow">One-minute Sherlock mysteries</p>
           <h3 id="challengeScoresTitle">Global Challenge Leaderboard</h3>
           <p>One minute, one passage. The fastest score per nickname is shown.</p>
           <form id="challengeScoreForm" class="challenge-score-form hidden" autocomplete="off">
@@ -391,6 +392,7 @@
               <section class="help-section" aria-labelledby="help-typing">
                 <h3 id="help-typing" tabindex="-1">Typing &amp; controls</h3>
                 <details data-help-entry><summary>Try the one-minute Challenge</summary><div>
+                  <p>Leave <strong>Rotate Sherlock stories</strong> unchecked for the original Missing Biscuit mystery every time. Check it for a shuffled set of twenty original mysteries. Your racer remembers the choice and the story cycle on this browser. The track scenery rotates independently either way.</p>
                   <p>Save a racer nickname, then select the red <strong>Challenge</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
                   <p>Open <strong>Challenge scores</strong> after a run to post it under a public game nickname. This board is shared across computers when the online service is available, and is separate from regular race scores. No scores are posted without your action.</p>
                   <p>Correct letters move your dino. The dino starts at an estimated 40 WPM. After every word, the game uses your recent typing pace (up to the last four words), the distance left, and the time remaining to size the next strides. Even a sudden sprint leaves visible track ahead until the buzzer. At 55 seconds, even mid-word, the game checks your last ten seconds of typing and adjusts your stride for the distance left. Stop typing and your dino settles, except for a glide in the final five seconds. You always cross at the buzzer; only typing earns WPM. <strong>Keystroke accuracy</strong> counts wrong keys even if you fix them. <strong>Text accuracy</strong> shows how much of the text you attempted was correct at the end; text you never reached doesn’t count against you.</p>

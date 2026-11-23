@@ -1,4 +1,7 @@
 import { TypingSession } from "./typing.js";
+import { bakerStories } from "./challenge-stories-baker.js";
+import { railwayStories } from "./challenge-stories-railway.js";
+import { curiosityStories } from "./challenge-stories-curiosity.js";
 
 export const CHALLENGE_SECONDS = 60;
 const FINAL_CHECK = CHALLENGE_SECONDS - 5;
@@ -21,9 +24,56 @@ export const CHALLENGE_PASSAGE = {
   ].join(" "),
 };
 
+export const CHALLENGE_STORIES = [CHALLENGE_PASSAGE, ...[...bakerStories, ...railwayStories, ...curiosityStories].map(story => ({
+  ...story, source: CHALLENGE_PASSAGE.source, text: story.text.trim().replace(/\s+/g, " "),
+}))];
+
+function drawFromCycle(items, history, random, avoidFirst) {
+  const ids = [...new Set(items.map(item => item.id))];
+  if (!ids.length) return { id: null, history: [] };
+  let used = [...new Set((Array.isArray(history) ? history : []).filter(id => ids.includes(id)))];
+  let options = ids.filter(id => !used.includes(id));
+  if (!options.length) {
+    options = ids.length === 1 ? ids : ids.filter(id => id !== used.at(-1));
+    used = [];
+  } else if (!used.length && options.length > 1 && avoidFirst) {
+    options = options.filter(id => id !== avoidFirst);
+  }
+  const id = options[Math.floor(random() * options.length)];
+  return { id, history: [...used, id] };
+}
+
+export function takeChallengeStory(profile, random = Math.random) {
+  if (profile.rotateChallengeStories !== true) return CHALLENGE_PASSAGE;
+  const pick = drawFromCycle(CHALLENGE_STORIES, profile.challengeStoryCycle, random, CHALLENGE_PASSAGE.id);
+  profile.challengeStoryCycle = pick.history;
+  return CHALLENGE_STORIES.find(story => story.id === pick.id);
+}
+
+// A browser-wide scenery rotation, independent of nicknames, scores and championships.
+export function makeChallengeTrackPicker({ storage = () => globalThis.localStorage, random = Math.random } = {}) {
+  const key = "dino:challenge-track-cycle:v1";
+  let visited = [];
+  let store;
+  try { store = storage(); } catch { /* Storage is optional. */ }
+  return tracks => {
+    if (!tracks.length) return null;
+    if (store) {
+      try {
+        const saved = JSON.parse(store.getItem(key));
+        if (Array.isArray(saved)) visited = saved;
+      } catch { /* Keep the in-memory cycle when storage is unreadable. */ }
+    }
+    const { id, history } = drawFromCycle(tracks, visited, random);
+    visited = history;
+    try { store?.setItem(key, JSON.stringify(visited)); } catch { store = null; }
+    return id;
+  };
+}
+
 export class TimedChallenge extends TypingSession {
-  constructor(mode = "strict", { startingWpm = 40 } = {}) {
-    super(CHALLENGE_PASSAGE.text, { ignoreMistakes: mode === "flow" });
+  constructor(mode = "strict", { startingWpm = 40, passage = CHALLENGE_PASSAGE } = {}) {
+    super(passage.text, { ignoreMistakes: mode === "flow" });
     this.attemptedCharacters = 0;
     this.startingWpm = Number.isFinite(startingWpm) ? Math.max(5, startingWpm) : 40;
     this.track = {

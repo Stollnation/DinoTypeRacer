@@ -462,6 +462,8 @@ body[data-screen=challenge] .challenge-lobby-copy h3 {
 }
 .challenge-lobby-copy > p:not(.eyebrow) { max-width: 29ch; margin: 10px 0 16px; color: #f7f0d8; line-height: 1.4; }
 .challenge-mode-picker { width: min(100%, 17rem); min-inline-size: 0; margin: 0 0 14px; padding: 0; border: 0; }
+.challenge-story-toggle { display: inline-flex; align-items: center; gap: .5rem; min-height: 36px; margin: 0 0 .6rem; color: #fff5dc; font-weight: 750; cursor: pointer; }
+.challenge-story-toggle input { inline-size: 1.1rem; block-size: 1.1rem; margin: 0; accent-color: #ffe0a1; cursor: pointer; }
 .challenge-mode-picker legend {
   margin-bottom: 6px; padding: 0; color: #ffe0a1; font-size: .75rem;
   font-weight: 800; letter-spacing: .06em; text-transform: uppercase;

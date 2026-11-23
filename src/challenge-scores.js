@@ -1,8 +1,9 @@
-import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS } from "./timed-challenge.js";
+import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, CHALLENGE_STORIES } from "./timed-challenge.js";
 
 const ENDPOINT = "/.netlify/functions/challenge-leaderboard";
-// Strict mode can retry the same letter, so attempts can exceed the passage length.
-const MAX_CHALLENGE_ATTEMPTS = CHALLENGE_PASSAGE.text.length * 3;
+const storyLengths = new Map(CHALLENGE_STORIES.map(story => [story.id, story.text.length]));
+const maxStoryLength = Math.max(...storyLengths.values());
+// Keep the existing shared ranking namespace and legacy clients' original passage.
 export const CHALLENGE_SCORE_PREFIX = `${CHALLENGE_PASSAGE.id}/`;
 export const CHALLENGE_PLAY_PREFIX = `${CHALLENGE_SCORE_PREFIX}plays/`;
 export const isChallengeToken = token => typeof token === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(token);
@@ -15,9 +16,10 @@ export function challengeNickname(input) {
 
 export function challengeScore(submission) {
   const nickname = challengeNickname(submission?.nickname);
-  const { correct, attempts } = submission || {};
-  if (!nickname || !Number.isInteger(correct) || !Number.isInteger(attempts)
-    || correct < 1 || correct > CHALLENGE_PASSAGE.text.length || correct > attempts || attempts > MAX_CHALLENGE_ATTEMPTS) return null;
+  const { correct, attempts, passageId = CHALLENGE_PASSAGE.id } = submission || {};
+  const length = storyLengths.get(passageId);
+  if (!nickname || !length || !Number.isInteger(correct) || !Number.isInteger(attempts)
+    || correct < 1 || correct > length || correct > attempts || attempts > length * 3) return null;
   return {
     nickname,
     wpm: (correct / 5) / (CHALLENGE_SECONDS / 60),
@@ -42,7 +44,7 @@ export function challengeRankings(blobs) {
     const accuracy = Number(fields[2]) / 10_000;
     let nickname;
     try { nickname = challengeNickname(decodeURIComponent(fields[3])); } catch { continue; }
-    if (!nickname || correct < 1 || correct > CHALLENGE_PASSAGE.text.length || accuracy <= 0 || accuracy > 1) continue;
+    if (!nickname || correct < 1 || correct > maxStoryLength || accuracy <= 0 || accuracy > 1) continue;
     const row = { nickname, wpm: (correct / 5) / (CHALLENGE_SECONDS / 60), accuracy };
     const alias = nickname.toLowerCase();
     const prev = best.get(alias);
@@ -85,11 +87,11 @@ export async function checkChallengeNickname(nickname, ownerId, fetcher = fetch)
 
 export async function postChallengeScore(submission, fetcher = fetch) {
   if (!challengeScore(submission)) throw new Error("Enter a nickname with 2 to 24 letters, numbers, spaces, hyphens, or underscores.");
-  const { nickname, correct, attempts, ownerId } = submission;
+  const { nickname, correct, attempts, ownerId, passageId } = submission;
   const response = await fetcher(ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ nickname, correct, attempts, ownerId }),
+    body: JSON.stringify({ nickname, correct, attempts, ownerId, passageId }),
   });
   if (response.status === 409) throw new Error("Name already taken. Try a different public nickname.");
   if (!response.ok) throw new Error("Could not post your score online. Try again in a moment.");
