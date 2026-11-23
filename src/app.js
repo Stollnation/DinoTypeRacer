@@ -6,7 +6,7 @@ import { bindHelp } from "./help.js";
 import { clearFireworks, fireworksMotionReduced, playFireworks, prepareFireworksAudio } from "./victory-fireworks.js";
 import { choosePassage, exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
-import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, TimedChallenge } from "./timed-challenge.js";
+import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, formatChallengeAccuracy, TimedChallenge } from "./timed-challenge.js";
 import { checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
 import { calculatePlace, createAiRacers, updateAi } from "./ai.js";
 import { GameAudio } from "./audio.js";
@@ -16,7 +16,6 @@ import { keyLabel, summarizeMistakes } from "./mistakes.js";
 import { resultQuip } from "./quips.js";
 import { adjustedAiBaseline, aiPaceLabel, clampAiPace, projectedAiRange } from "./difficulty.js";
 import { focusKeysForRace, normalizedFocusKey } from "./focus-keys.js";
-import { fetchOnlineLeaderboard, submitOnlineLeaderboard } from "./online-leaderboard.js";
 import { blankLevel, createCampaign, duplicateCampaign, exportCampaign, importCampaign, validateCampaign } from "./campaigns.js";
 import { activeNemeses, buildBossPassage, buildNemeses, typingDna, updateNemesisMastery } from "./nemesis.js";
 import { CUSTOM_RACER_ANCHOR, customRacerId, customRacerManifest, deleteCustomRacerAsset, loadCustomRacerAsset, renderCustomRacer, saveCustomRacerAsset, validateRacerFile } from "./custom-racers.js";
@@ -53,15 +52,12 @@ let raceFrame = null;
 let raceActive = false;
 let lastRaceResult = data.records[0] || null;
 let displayedPodiumPlace = null;
-let onlineLeaderboardRows = null;
-let onlineLeaderboardError = "";
 let historicalReturnScreen = null;
 let mistakeReviewResult = null;
 let mistakeScope = "race";
 let raceFinishTimer = null;
-let quickIntroResult = null;
 let latestChallengeScore = null;
-let challengeBoardRequest = 0;
+const challengeBoardRequests = new Map();
 let championship = data.activeChampionship || null;
 let reviewingCompletedLevel = false;
 let selectedReviewResult = null;
@@ -1107,14 +1103,12 @@ function startIntroRace(name) {
 }
 
 function renderQuickRaceResult(result) {
-  quickIntroResult = result;
   $("#finishOverlay").classList.add("hidden");
   $("#quickResultTitle").textContent = result.perfect ? "Perfect quick dash!" : `${ordinal(result.place)} place!`;
   $("#quickResultSummary").textContent = `${result.playerName || "Racer"}, your quick race pace is now saved as your starting pace.`;
   $("#quickResultWpm").textContent = Math.round(result.wpm);
   $("#quickResultAccuracy").textContent = `${Math.round(result.accuracy * 100)}%`;
   $("#quickResultPlace").textContent = ordinal(result.place);
-  $("#quickLeaderboardStatus").textContent = "Saving leaderboard score online...";
   $("#quickResultOverlay").classList.remove("hidden");
   void playFireworks($("#quickResultOverlay"), result.place);
   setTimeout(() => $("#quickResultOverlay [data-action='continue-after-quick-race']")?.focus(), 0);
@@ -1131,10 +1125,6 @@ function finishQuickIntroRace(result, now, time) {
   lastRaceResult = result;
   renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
   renderQuickRaceResult(result);
-  void syncLeaderboardResult(result).then((savedOnline) => {
-    if (quickIntroResult?.id !== result.id) return;
-    $("#quickLeaderboardStatus").textContent = savedOnline ? "Leaderboard score synced online." : onlineLeaderboardError;
-  });
 }
 
 function continueAfterQuickRace() {
@@ -1259,14 +1249,19 @@ function startRace({ roundNumberOverride = null, timedChallenge = false } = {}) 
   const playerCharacterId = manifest.characters.some((item) => item.id === data.profile.characterId) ? data.profile.characterId : (manifest.characters.find((item) => item.id === "nova") || manifest.characters[0]).id;
   renderer.setTrack(track.id);
   raceSetup = { mode, difficulty, passage, roundNumber, trackId: track.id, focusKeys: timedChallenge ? [] : activeFocusKeys(), quickIntro, timedChallenge, attemptId: timedChallenge ? globalThis.crypto?.randomUUID?.() : null };
-  raceSession = timedChallenge ? new TimedChallenge(challengeTypingMode()) : new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
+  raceSession = timedChallenge
+    ? new TimedChallenge(challengeTypingMode())
+    : new TypingSession(passage.text, { ignoreMistakes: data.settings.raceTypingMode === "flow" });
   raceRacers = timedChallenge ? [] : createAiRacers({ mode, baselineWpm: baseline, ratios: CONFIG.adaptiveRatios, fixedRatio: CONFIG.fixedRatios[difficulty], passageId: passage.id, bestReplay: data.bestReplay, characters: manifest.characters, playerCharacterId });
   racePlayer = { id: "player", name: (timedChallenge ? data.profile.name : championship.playerName || data.profile.name) || "Racer", characterId: playerCharacterId, progress: 0, finishTime: null };
   const modeName = mode === "adaptive" ? "Adaptive" : mode === "ghost" ? "Personal Best" : `${difficulty[0].toUpperCase() + difficulty.slice(1)} Fixed`;
   $("#raceModeLabel").textContent = timedChallenge ? `One-minute Challenge - ${track.displayName}` : quickIntro ? `Quick Dino Dash - ${track.displayName}` : `Level ${championship.level} - Race ${roundNumber} of ${CHAMPIONSHIP_RACES} - ${modeName} - ${track.displayName}`;
   $("#raceTitle").textContent = !timedChallenge && passage.source ? `${passage.title} - ${passage.source}` : passage.title;
   $("#raceScreen").toggleAttribute("data-challenge", timedChallenge);
-  $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = "100%"; $("#raceProgress").textContent = "0";
+  $("#raceWpm").textContent = "0"; $("#raceAccuracy").textContent = timedChallenge ? "—" : "100%"; $("#raceProgress").textContent = "0";
+  $("#raceAccuracyLabel").textContent = timedChallenge ? "Keystroke accuracy" : "Accuracy";
+  $("#challengeTextAccuracy").textContent = "—";
+  $("#challengeTextAccuracyStat").classList.toggle("hidden", !timedChallenge);
   const typingModeHint = raceTypingModeHint();
   $("#raceHint").textContent = raceSetup.focusKeys.length ? `The race starts after the countdown - ${typingModeHint} ${raceTypingInstruction()}` : `The race starts after the countdown - ${typingModeHint}`;
   $("#raceLastResultsButton").classList.toggle("hidden", timedChallenge || !lastRaceResult);
@@ -1329,8 +1324,8 @@ function updateRace(now) {
     if (remaining <= 0) { finishTimedChallenge(now); return; }
     $("#challengeClock").textContent = formatTime(Math.ceil(remaining));
     $("#raceWpm").textContent = Math.round(raceSession.wpm(now));
-    $("#raceAccuracy").textContent = `${Math.round(raceSession.accuracy * 100)}%`;
-    racePlayer.progress = raceSession.trackProgress;
+    renderChallengeAccuracy();
+    racePlayer.progress = raceSession.trackProgress(now);
     renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
     raceFrame = requestAnimationFrame(updateRace);
     return;
@@ -1356,21 +1351,30 @@ function pauseRace(force = false) {
   } else if (!force) resumeRace();
 }
 
+function renderChallengeAccuracy() {
+  const keystroke = formatChallengeAccuracy(raceSession.totalKeystrokes ? raceSession.accuracy : null);
+  const text = formatChallengeAccuracy(raceSession.textAccuracy);
+  $("#raceAccuracy").textContent = keystroke;
+  $("#challengeTextAccuracy").textContent = text;
+  return { keystroke, text };
+}
+
 function finishTimedChallenge(now) {
   raceActive = false;
   cancelAnimationFrame(raceFrame);
   audio.pauseMusic({ reset: true });
   audio.play("finish");
-  const accuracy = raceSession.totalKeystrokes ? `${Math.round(raceSession.accuracy * 100)}%` : "—";
+  const accuracy = renderChallengeAccuracy();
   latestChallengeScore = raceSession.correctKeystrokes ? { correct: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes, profile: profileKey(), posted: false } : null;
   $("#useChallengePace").disabled = !latestChallengeScore || raceSession.scoreWpm < 5;
   $("#challengeClock").textContent = "0:00";
   $("#raceWpm").textContent = $("#challengeResultWpm").textContent = Number(raceSession.scoreWpm.toFixed(1));
-  $("#raceAccuracy").textContent = $("#challengeResultAccuracy").textContent = accuracy;
+  $("#challengeResultAccuracy").textContent = accuracy.keystroke;
+  $("#challengeResultTextAccuracy").textContent = accuracy.text;
   $("#raceHint").textContent = "Challenge complete";
   $("#raceTyping").setAttribute("aria-disabled", "true");
   $("#racePauseButton").disabled = true;
-  racePlayer.progress = raceSession.trackProgress;
+  racePlayer.progress = raceSession.trackProgress(now);
   renderer.draw({ racers: [], player: racePlayer, time: now, countdown: false });
   $("#challengeResultOverlay").classList.remove("hidden");
   $("#challengePlayAgain").focus({ preventScroll: true });
@@ -1412,16 +1416,18 @@ function useChallengePace() {
 }
 
 async function refreshChallengeScores(view = "dialog") {
-  const request = ++challengeBoardRequest;
   const lobby = view === "lobby";
-  const status = lobby ? $("#challengeLobbyScoresStatus") : $("#challengeScoresStatus");
-  const list = lobby ? $("#challengeLobbyScoresList") : $("#challengeScoresList");
+  const combined = view === "combined";
+  const status = lobby ? $("#challengeLobbyScoresStatus") : combined ? $("#globalLeaderboardStatus") : $("#challengeScoresStatus");
+  const list = lobby ? $("#challengeLobbyScoresList") : combined ? $("#globalLeaderboardList") : $("#challengeScoresList");
+  const request = (challengeBoardRequests.get(view) || 0) + 1;
+  challengeBoardRequests.set(view, request);
   if (lobby) $("#challengePlayCount").textContent = "—";
   status.textContent = "Loading shared scores…";
   list.replaceChildren();
   try {
     const { records, plays } = await fetchChallengeBoard();
-    if (request !== challengeBoardRequest) return;
+    if (request !== challengeBoardRequests.get(view)) return;
     if (lobby) $("#challengePlayCount").textContent = plays.toLocaleString();
     status.textContent = records.length ? "" : "No scores posted yet.";
     for (const { nickname, wpm, accuracy } of records.slice(0, lobby ? 8 : 50)) {
@@ -1436,7 +1442,9 @@ async function refreshChallengeScores(view = "dialog") {
       list.append(row);
     }
   } catch {
-    if (request === challengeBoardRequest) status.textContent = "Online Challenge scores are unavailable here. You can still race.";
+    if (request === challengeBoardRequests.get(view)) status.textContent = combined
+      ? "Global scores are unavailable right now."
+      : "Online Challenge scores are unavailable here. You can still race.";
   }
 }
 
@@ -1541,7 +1549,6 @@ function finishRace(now, { forcePlayerFirst = false } = {}) {
   }
   if (!data.bestReplay || time < data.bestReplay.time) data.bestReplay = { playerName: result.playerName, time, wpm: result.wpm, passageId: raceSetup.passage.id, samples: raceSession.samples.map((sample) => ({ t: sample.t, p: sample.p })) };
   persist(); lastRaceResult = result;
-  void syncLeaderboardResult(result);
   selectedReviewResult = reviewingCompletedLevel ? result : selectedReviewResult;
   replayingCompletedRace = null;
   renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
@@ -1625,54 +1632,14 @@ function leaderboardRows() {
     .map((record, index) => ({ ...record, rank: index + 1 }));
 }
 
-function combineLeaderboardRows(localRows, onlineRows = []) {
-  const records = new Map();
-  [...onlineRows, ...localRows].forEach((record) => {
-    if (!Number.isFinite(record.wpm) || !Number.isFinite(record.accuracy)) return;
-    records.set(record.id || `${record.playerName}-${record.date}-${record.wpm}`, record);
-  });
-  return [...records.values()]
-    .sort((a, b) => b.wpm - a.wpm || b.accuracy - a.accuracy || a.time - b.time)
-    .map((record, index) => ({ ...record, rank: index + 1 }));
-}
-
-async function syncLeaderboardResult(result) {
-  try {
-    onlineLeaderboardRows = await submitOnlineLeaderboard(result);
-    onlineLeaderboardError = "";
-    return true;
-  } catch (error) {
-    onlineLeaderboardError = "Showing scores saved on this browser.";
-    console.warn(error);
-    return false;
-  }
-}
-
-async function refreshOnlineLeaderboard() {
-  try {
-    onlineLeaderboardRows = await fetchOnlineLeaderboard();
-    onlineLeaderboardError = "";
-  } catch (error) {
-    onlineLeaderboardError = "Showing scores saved on this browser.";
-    console.warn(error);
-  }
-}
-
 function renderLeaderboardRows(rows) {
   $("#leaderboardTable").innerHTML = rows.length ? rows.slice(0, 100).map((record) => `<div class="${record.playerName === data.profile.name ? "is-player" : ""}"><span>${escapeHtml(record.rank)}</span><strong>${escapeHtml(record.playerName || "Racer")}</strong><b>${Math.round(record.wpm)} WPM</b><small>Level ${escapeHtml(record.level || 1)} - Race ${escapeHtml(record.roundNumber || 1)} - ${Math.round(record.accuracy * 100)}% - ${escapeHtml(record.passageTitle || "Race")}</small></div>`).join("") : `<p class="leaderboard-empty">No races yet.</p>`;
 }
 
-async function renderLeaderboard() {
-  const localRows = leaderboardRows();
-  let rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
-  const localCount = localRows.length;
-  const onlineCount = onlineLeaderboardRows?.length || 0;
-  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown. Loading online scores; saved scores from this browser are visible now.` : "Finish a race to add the first leaderboard entry. Loading online scores...";
-  renderLeaderboardRows(rows);
-  await refreshOnlineLeaderboard();
-  rows = combineLeaderboardRows(localRows, onlineLeaderboardRows || []);
-  $("#leaderboardSummary").textContent = rows.length ? `${rows.length.toLocaleString()} race entr${rows.length === 1 ? "y" : "ies"} shown. ${onlineLeaderboardError || `Online leaderboard synced. Also showing ${localCount} score${localCount === 1 ? "" : "s"} saved on this browser.`}` : `No leaderboard entries yet. ${onlineLeaderboardError || "Finish a race to save a score on this browser and sync it online."}`;
-  renderLeaderboardRows(rows);
+function openLeaderboard() {
+  renderLeaderboardRows(leaderboardRows());
+  $("#leaderboardDialog").showModal();
+  void refreshChallengeScores("combined");
 }
 
 function showSeriesResult(recordId) {
@@ -2118,7 +2085,7 @@ function toggleMusic() {
 function toast(message) { const node = $("#toast"); node.textContent = message; node.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 1800); }
 
 function handleTypingKey(event) {
-  if ($("#challengeScoresDialog").open) return;
+  if ($("#challengeScoresDialog").open || $("#leaderboardDialog").open) return;
   if (currentScreen === "results" && event.key === "Enter" && event.target === $("#nextRaceButton") && !$("#nextRaceButton").classList.contains("hidden") && !$("#nextRaceButton").disabled) { event.preventDefault(); nextRace(); return; }
   if (!["calibration", "race"].includes(currentScreen) || event.ctrlKey || event.metaKey || event.altKey || event.target.matches("input, textarea, select")) return;
   if (event.key === "Escape" && currentScreen === "race") { event.preventDefault(); pauseRace(); return; }
@@ -2232,7 +2199,7 @@ function bindEvents() {
     if (action === "load-profile") loadDashboardProfile();
     if (action === "close-profile-picker") closeProfilePicker();
     if (action === "save-profile-from-picker") saveProfileFromPicker();
-    if (action === "open-leaderboard") { void renderLeaderboard(); $("#leaderboardDialog").showModal(); }
+    if (action === "open-leaderboard") openLeaderboard();
     if (action === "close-leaderboard") $("#leaderboardDialog").close();
     if (action === "open-mistakes") { renderMistakeStats(mistakeReviewResult || lastRaceResult, mistakeScope); $("#mistakeDialog").showModal(); }
     if (action === "close-mistakes") $("#mistakeDialog").close();

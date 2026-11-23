@@ -1,6 +1,12 @@
 import { TypingSession } from "./typing.js";
 
 export const CHALLENGE_SECONDS = 60;
+const FINAL_CHECK = CHALLENGE_SECONDS - 5;
+const SAMPLE_SECONDS = 10;
+// Keep enough visible course ahead of even a very sudden sprint. This is
+// a ceiling, not a clock-driven position: before the last five seconds an
+// idle racer doesn't move at all.
+const finishCeiling = elapsed => 1 - 0.8 * Math.max(0, 1 - elapsed / CHALLENGE_SECONDS);
 export const CHALLENGE_PASSAGE = {
   id: "challenge-missing-biscuit-v1",
   title: "The Case of the Missing Biscuit",
@@ -16,21 +22,101 @@ export const CHALLENGE_PASSAGE = {
 };
 
 export class TimedChallenge extends TypingSession {
-  constructor(mode = "strict") { super(CHALLENGE_PASSAGE.text, { ignoreMistakes: mode === "flow" }); }
+  constructor(mode = "strict", { startingWpm = 40 } = {}) {
+    super(CHALLENGE_PASSAGE.text, { ignoreMistakes: mode === "flow" });
+    this.attemptedCharacters = 0;
+    this.startingWpm = Number.isFinite(startingWpm) ? Math.max(5, startingWpm) : 40;
+    this.track = {
+      from: 0, target: 0, lastHit: null, glide: 0.18, estimatedWpm: this.startingWpm,
+      stride: 1 / (this.startingWpm * 5), wordMarks: [{ time: 0, correct: 0 }],
+      recentCorrect: 0, finishFrom: null,
+    };
+  }
 
   remaining(now) {
     return this.startTime === null ? CHALLENGE_SECONDS : Math.max(0, Math.min(CHALLENGE_SECONDS, CHALLENGE_SECONDS - (now - this.startTime) / 1000));
   }
 
   type(char, now = performance.now()) {
-    return this.remaining(now) > 0 && super.type(char, now);
+    if (this.remaining(now) <= 0) return false;
+    const position = this.index;
+    const before = this.totalKeystrokes;
+    const correct = super.type(char, now);
+    // A pending Strict miss still counts as attempted, even after pressing Backspace.
+    if (this.totalKeystrokes !== before) this.attemptedCharacters = position + 1;
+    const elapsed = CHALLENGE_SECONDS - this.remaining(now);
+    if (correct) {
+      if (elapsed >= FINAL_CHECK - SAMPLE_SECONDS && elapsed < FINAL_CHECK) this.track.recentCorrect++;
+      this.earnStride(now, elapsed);
+    }
+    if (this.index > position && (this.text[position] === " " || this.finished)) this.updateWordPace(now, elapsed);
+    return correct;
   }
 
   get scoreWpm() { return (this.correctKeystrokes / 5) / (CHALLENGE_SECONDS / 60); }
 
-  get trackProgress() {
-    // One-minute track distance is separate from the much longer typing passage.
-    const chars = this.correctKeystrokes;
-    return chars <= 350 ? chars / 500 : 0.7 + 0.299 * (1 - Math.exp(-(chars - 350) / 210));
+  get textAccuracy() { return this.attemptedCharacters ? this.correctKeystrokes / this.attemptedCharacters : null; }
+
+  updateWordPace(now, elapsed) {
+    const track = this.track;
+    // Replan at every word boundary, using at most four actual passage words
+    // so a short word (or a pause) doesn't jerk the next stride around.
+    const first = track.wordMarks[0];
+    const seconds = elapsed - first.time;
+    const visible = this.trackProgress(now);
+    if (seconds > 0) {
+      track.estimatedWpm = Math.max(5, Math.min(360, (this.correctKeystrokes - first.correct) * 12 / seconds));
+      const keysLeft = Math.max(1, this.remaining(now) * track.estimatedWpm / 12);
+      const distanceLeft = 1 - Math.max(track.target, visible);
+      track.stride = Math.min(0.06, distanceLeft / keysLeft);
+    }
+    track.wordMarks.push({ time: elapsed, correct: this.correctKeystrokes });
+    if (track.wordMarks.length > 4) track.wordMarks.shift();
   }
+
+  earnStride(now, elapsed) {
+    const track = this.track;
+    const visible = this.trackProgress(now);
+    const earned = Math.max(visible, track.target);
+    track.from = visible;
+    const headroom = Math.max(0, finishCeiling(elapsed) - earned);
+    track.target = earned + Math.min(track.stride, headroom * 0.3);
+    track.lastHit = elapsed;
+    track.glide = Math.max(0.10, Math.min(0.28, 12 / track.estimatedWpm));
+  }
+
+  trackProgress(now) {
+    const { from, target, lastHit, glide } = this.track;
+    const elapsed = CHALLENGE_SECONDS - this.remaining(now);
+    const strideAt = time => {
+      if (lastHit === null) return 0;
+      const t = Math.min(1, Math.max(0, (time - lastHit) / glide));
+      return from + (target - from) * (1 - (1 - t) ** 2);
+    };
+    const visible = strideAt(elapsed);
+    // Only the final approach has an automatic assist; it never earns WPM.
+    if (elapsed < FINAL_CHECK) return visible;
+    if (this.track.finishFrom === null) {
+      this.track.finishFrom = strideAt(FINAL_CHECK);
+      // Use recent correct typing, including partial words. A quiet sample has
+      // no usable speed: keep the last stride for a restart and let the glide finish.
+      const recentWpm = this.track.recentCorrect * 12 / SAMPLE_SECONDS;
+      if (recentWpm > 0) {
+        this.track.estimatedWpm = recentWpm;
+        const keysLeft = Math.max(1, recentWpm * (CHALLENGE_SECONDS - FINAL_CHECK) / 12);
+        this.track.stride = (1 - Math.max(target, this.track.finishFrom)) / keysLeft;
+      }
+    }
+    if (elapsed >= CHALLENGE_SECONDS) return 1;
+    const t = (elapsed - FINAL_CHECK) / (CHALLENGE_SECONDS - FINAL_CHECK);
+    const assist = this.track.finishFrom + (1 - this.track.finishFrom) * t * t * (3 - 2 * t);
+    return Math.min(finishCeiling(elapsed), Math.max(visible, assist));
+  }
+}
+
+export function formatChallengeAccuracy(accuracy) {
+  if (accuracy === null) return "—";
+  if (accuracy === 1) return "100%";
+  // A rounded 100% would hide a real mistake on a fast run.
+  return `${Math.min(99.9, Math.round(accuracy * 1_000) / 10)}%`;
 }

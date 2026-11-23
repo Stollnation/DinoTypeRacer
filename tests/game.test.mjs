@@ -68,10 +68,16 @@ test("race music and key noise have separate controls", () => {
   assert.match(app, /audio\.pauseMusic/);
   assert.match(audio, /kind === "key" \|\| kind === "error"/);
 });
-test("leaderboard fallback uses calm browser-only wording", () => {
+test("Ready shows separate global Challenge and browser-only leaderboards", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   const app = readFileSync(new URL("../src/app.js", import.meta.url), "utf8");
-  assert.doesNotMatch(app, /Online leaderboard (?:save|load) failed/);
-  assert.match(app, /Showing scores saved on this browser\./);
+  const board = html.match(/<dialog id="leaderboardDialog"[\s\S]*?<\/dialog>/)?.[0];
+  assert.match(board, /Global Challenge[\s\S]*id="globalLeaderboardList"/);
+  assert.match(board, /This Browser[\s\S]*id="leaderboardTable"/);
+  assert.match(app, /renderLeaderboardRows\(leaderboardRows\(\)\)/);
+  assert.match(app, /refreshChallengeScores\("combined"\)/);
+  assert.match(app, /Global scores are unavailable right now\./);
+  assert.doesNotMatch(app, /submitOnlineLeaderboard|combineLeaderboardRows/);
 });
 test("flow mode counts mistakes without blocking progress", () => { const session = new TypingSession("abc", { ignoreMistakes: true }); session.type("x", 0); assert.equal(session.index, 1); assert.equal(session.errorChar, ""); assert.equal(session.errors, 1); session.type("b", 1000); assert.equal(session.index, 2); assert.equal(session.correctKeystrokes, 1); });
 test("WPM and accuracy follow the specification", () => { const session = new TypingSession("hello"); "hello".split("").forEach((char, i) => session.type(char, i * 12000)); assert.equal(Math.round(session.wpm()), 1); assert.equal(session.accuracy, 1); });

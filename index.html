@@ -78,7 +78,7 @@
                 <div class="calibration-card-actions">
                   <button id="startingPaceButton" class="inline-button" data-action="set-starting-pace">Set starting pace</button>
                   <button class="inline-button calibration-complete-only" data-action="retest">Retake test</button>
-                  <button class="inline-button calibration-complete-only" data-action="open-leaderboard">Leaderboard</button>
+                  <button class="inline-button" type="button" data-action="open-leaderboard">Leaderboard</button>
                 </div>
               </div>
               <div class="pace-challenge-action">
@@ -172,15 +172,18 @@
         <section class="screen race-screen" id="raceScreen" aria-labelledby="raceTitle">
           <div class="race-topline">
             <div><p class="eyebrow" id="raceModeLabel">Adaptive Race</p><h2 id="raceTitle">Coastal Sunrise</h2></div>
-            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span>Accuracy</span><strong id="raceAccuracy">100%</strong></div><div id="racePlaceStat"><span>Place</span><strong id="racePlace">1 / 5</strong></div><div id="challengeClockStat" class="hidden"><span>Time left</span><strong id="challengeClock" role="timer">1:00</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="race-controls">Race setup</button><button class="secondary compact" id="racePauseButton" data-action="pause">Pause</button><button class="secondary compact race-help-button" id="raceHelpButton" type="button" data-action="help" aria-label="Game help" title="Pause and open Game Help">?</button></div>
+            <div class="race-stats"><div><span>WPM</span><strong id="raceWpm">0</strong></div><div><span id="raceAccuracyLabel">Accuracy</span><strong id="raceAccuracy">100%</strong></div><div id="challengeTextAccuracyStat" class="hidden"><span>Text accuracy</span><strong id="challengeTextAccuracy">—</strong></div><div id="racePlaceStat"><span>Place</span><strong id="racePlace">1 / 5</strong></div><div id="challengeClockStat" class="hidden"><span>Time left</span><strong id="challengeClock" role="timer">1:00</strong></div><button class="secondary compact hidden" id="raceLastResultsButton" data-action="last-results">Last results</button><button class="secondary compact" data-action="race-controls">Race setup</button><button class="secondary compact" id="racePauseButton" data-action="pause">Pause</button><button class="secondary compact race-help-button" id="raceHelpButton" type="button" data-action="help" aria-label="Game help" title="Pause and open Game Help">?</button></div>
           </div>
-          <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="quick-result-overlay hidden" id="quickResultOverlay"><div><p class="eyebrow">Quick race complete</p><h3 id="quickResultTitle">Nice run!</h3><p id="quickResultSummary"></p><div class="quick-result-grid"><span><b id="quickResultWpm">0</b> WPM</span><span><b id="quickResultAccuracy">100%</b> accuracy</span><span><b id="quickResultPlace">1st</b> place</span></div><p class="quick-sync-status" id="quickLeaderboardStatus">Saving leaderboard score...</p><div class="quick-result-actions"><button class="secondary" data-action="open-leaderboard">Leaderboard</button><button class="primary" data-action="continue-after-quick-race">Continue to races</button></div></div></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><!-- QA shortcut, if needed again: <button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button> --></div></div>
+          <div class="race-canvas-wrap"><canvas id="raceCanvas" width="1823" height="863" aria-label="Five runners racing across a dinosaur track"></canvas><div class="countdown" id="countdown">3</div><div class="finish-overlay hidden" id="finishOverlay"><strong id="finishPlaceNumber">1</strong><span id="finishPlaceLabel">You placed 1st</span><img class="perfect-celebration hidden" id="perfectCelebration" alt="Perfect typing!" /></div><div class="quick-result-overlay hidden" id="quickResultOverlay"><div><p class="eyebrow">Quick race complete</p><h3 id="quickResultTitle">Nice run!</h3><p id="quickResultSummary"></p><div class="quick-result-grid"><span><b id="quickResultWpm">0</b> WPM</span><span><b id="quickResultAccuracy">100%</b> accuracy</span><span><b id="quickResultPlace">1st</b> place</span></div><p class="quick-sync-status" id="quickLeaderboardStatus">Score saved on this browser.</p><div class="quick-result-actions"><button class="secondary" data-action="open-leaderboard">Leaderboard</button><button class="primary" data-action="continue-after-quick-race">Continue to races</button></div></div></div><div class="pause-overlay hidden" id="pauseOverlay"><strong>Race paused</strong><p>Press Escape or Resume when you are ready.</p><div class="pause-actions"><button class="primary" data-action="resume">Resume</button><button class="secondary" data-action="restart-race">Restart race</button><!-- QA shortcut, if needed again: <button class="secondary debug-finish-button" data-action="debug-finish-first">Finish race first</button> --></div></div>
             <div class="quick-result-overlay hidden" id="challengeResultOverlay" role="region" aria-labelledby="challengeResultTitle">
             <div>
               <p class="eyebrow">60-second Challenge</p><h3 id="challengeResultTitle">Time’s up!</h3>
               <div class="quick-result-grid challenge-result-grid">
-                <span><b id="challengeResultWpm">0</b> WPM</span><span><b id="challengeResultAccuracy">—</b> accuracy</span>
+                <span><b id="challengeResultWpm">0</b> WPM</span>
+                <span><b id="challengeResultAccuracy">—</b> Keystroke accuracy</span>
+                <span><b id="challengeResultTextAccuracy">—</b> Text accuracy</span>
               </div>
+              <p class="challenge-result-note">Keystroke accuracy counts mistakes you fixed. Text accuracy shows what was right in the part you tried.</p>
               <div class="quick-result-actions">
                 <button class="secondary" id="useChallengePace" type="button" data-action="use-challenge-pace">Use as starting pace</button>
                 <button class="secondary" type="button" data-action="open-challenge-scores">Challenge scores</button>
@@ -235,8 +238,19 @@
           <button class="dialog-close" data-action="close-leaderboard" aria-label="Close leaderboard">&times;</button>
           <p class="eyebrow">Race records</p>
           <h3 id="leaderboardDialogTitle">Leaderboard</h3>
-          <p id="leaderboardSummary" class="leaderboard-summary"></p>
-          <div class="leaderboard-table" id="leaderboardTable"></div>
+          <div class="leaderboard-panels">
+            <section class="leaderboard-pane" aria-labelledby="globalLeaderboardTitle">
+              <h4 id="globalLeaderboardTitle">Global Challenge</h4>
+              <p>Public scores from the 60-second Challenge.</p>
+              <p id="globalLeaderboardStatus" class="leaderboard-summary" role="status"></p>
+              <ol id="globalLeaderboardList" class="challenge-scores-list leaderboard-scroll" tabindex="0" aria-labelledby="globalLeaderboardTitle"></ol>
+            </section>
+            <section class="leaderboard-pane" aria-labelledby="localLeaderboardTitle">
+              <h4 id="localLeaderboardTitle">This Browser</h4>
+              <p>Regular race scores saved on this browser only.</p>
+              <div class="leaderboard-table leaderboard-scroll" id="leaderboardTable" tabindex="0" role="region" aria-labelledby="localLeaderboardTitle"></div>
+            </section>
+          </div>
         </dialog>
         <dialog id="challengeScoresDialog" class="leaderboard-dialog" aria-labelledby="challengeScoresTitle">
           <button class="dialog-close" type="button" data-action="close-challenge-scores" aria-label="Close">&times;</button>
@@ -379,6 +393,7 @@
                 <details data-help-entry><summary>Try the one-minute Challenge</summary><div>
                   <p>Save a racer nickname, then select the red <strong>Challenge</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
                   <p>Open <strong>Challenge scores</strong> after a run to post it under a public game nickname. This board is shared across computers when the online service is available, and is separate from regular race scores. No scores are posted without your action.</p>
+                  <p>Correct letters move your dino. The dino starts at an estimated 40 WPM. After every word, the game uses your recent typing pace (up to the last four words), the distance left, and the time remaining to size the next strides. Even a sudden sprint leaves visible track ahead until the buzzer. At 55 seconds, even mid-word, the game checks your last ten seconds of typing and adjusts your stride for the distance left. Stop typing and your dino settles, except for a glide in the final five seconds. You always cross at the buzzer; only typing earns WPM. <strong>Keystroke accuracy</strong> counts wrong keys even if you fix them. <strong>Text accuracy</strong> shows how much of the text you attempted was correct at the end; text you never reached doesn’t count against you.</p>
                 </div></details>
                 <details data-help-entry><summary>What is the difference between Strict and Flow?</summary><div>
                   <p>In either mode, type the passage as shown, including capital letters, punctuation, and spaces. When the countdown ends, click the typing area if it doesn't have focus.</p>
@@ -451,8 +466,8 @@ At sunset, the youngest dinosaur finds a shortcut through the ferns.</pre>
                   <p><strong>Import replaces the destination's local saves; it doesn't merge them.</strong> The backup includes profiles, progress, libraries, campaigns, and custom racer artwork. It doesn't change the online leaderboard. Keep the file private and use the HTTPS site or a localhost copy for transfers.</p>
                 </div></details>
                 <details data-help-entry><summary>Understand local and online leaderboard scores</summary><div>
-                  <p>Open <strong>Leaderboard</strong> in the starting-pace card or on the finish page. On a site with online scores enabled, other players can see reported results, including a nickname, the passage title, speed, accuracy, and placement. The leaderboard does not share the full passage, your typing history, private saves, or custom artwork.</p>
-                  <p><strong>Showing scores saved on this browser</strong> means you're looking at local scores. An offline or local copy may not have a shared leaderboard, but it can still save your own race results.</p>
+                  <p>Open <strong>Leaderboard</strong> in the starting-pace card or on the finish page to see two separate boards. <strong>Global Challenge</strong> shows scores players chose to post after the one-minute Challenge. <strong>This Browser</strong> shows regular race results saved for players on this browser. Regular race results never go on the global board.</p>
+                  <p>Only the public nickname, speed, and accuracy appear on the Global Challenge board. If you're offline, you can still see your browser's local scores.</p>
                 </div></details>
               </section>
 

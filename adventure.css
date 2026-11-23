@@ -491,7 +491,9 @@ body[data-screen=challenge] .challenge-lobby-copy h3 {
   .challenge-lobby-feature > img { width: 73%; right: -10%; opacity: .82; }
   .challenge-play-ticker { min-width: 106px; padding: 5px 6px; right: 8px; bottom: 8px; }
 }
-#challengeResultOverlay .challenge-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#challengeResultOverlay .challenge-result-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(4px, 1vw, 10px); }
+#challengeResultOverlay .challenge-result-grid span { padding: clamp(5px, 1vw, 12px); font-size: clamp(.6rem, 1.3vw, .76rem); }
+#challengeResultOverlay .challenge-result-note { margin: 0; font-size: .78rem; line-height: 1.35; }
 #challengeResultOverlay > div { padding: clamp(12px, 3vw, 30px); }
 #challengeResultOverlay h3 { font-size: clamp(1.5rem, 4vw, 3.4rem); }
 #challengeResultOverlay .quick-result-actions { gap: 6px; margin-top: 10px; }
@@ -507,6 +509,18 @@ body[data-screen=race] #raceScreen[data-challenge] .race-typing .typing-viewport
 .challenge-scores-list { padding-inline-start: 28px; }
 .challenge-scores-list li { padding: 5px; border-bottom: 1px solid var(--line); }
 .challenge-scores-list li > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.leaderboard-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+.leaderboard-pane { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.leaderboard-pane h4 { margin: 0; font-size: 1.1rem; }
+.leaderboard-pane > p { margin: 5px 0 0; color: var(--ink-soft); font-size: .86rem; }
+.leaderboard-pane > p:empty, .leaderboard-scroll:empty { display: none; }
+.leaderboard-scroll { margin: 10px 0 0; max-block-size: min(44vh, 28rem); overflow: auto; }
+.leaderboard-scroll strong { overflow-wrap: anywhere; }
+.leaderboard-pane .leaderboard-table > div { grid-template-columns: 28px minmax(0, 1fr) auto; gap: 4px 8px; }
+@media (max-width: 680px) {
+  .leaderboard-panels { grid-template-columns: minmax(0, 1fr); }
+  .leaderboard-scroll { max-block-size: min(28vh, 13rem); }
+}
 #dashboardScreen .race-controls-grid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); margin: 0; }
 #dashboardScreen .setup-panel { min-width: 0; padding: 8px 12px; gap: 0; }
 #dashboardScreen .panel-title { margin: 0 0 6px; }
