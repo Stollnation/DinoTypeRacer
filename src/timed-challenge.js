@@ -102,9 +102,16 @@ export class TimedChallenge extends TypingSession {
     return correct;
   }
 
-  get scoreWpm() { return (this.correctKeystrokes / 5) / (CHALLENGE_SECONDS / 60); }
+  backspace(now = performance.now()) {
+    if (this.remaining(now) > 0) super.backspace(now);
+  }
 
-  get textAccuracy() { return this.attemptedCharacters ? this.correctKeystrokes / this.attemptedCharacters : null; }
+  get scoreWpm() { return (this.correctCharacters / 5) / (CHALLENGE_SECONDS / 60); }
+
+  get textAccuracy() {
+    const attempted = this.ignoreMistakes ? this.index : this.attemptedCharacters;
+    return attempted ? this.correctCharacters / attempted : null;
+  }
 
   updateWordPace(now, elapsed) {
     const track = this.track;

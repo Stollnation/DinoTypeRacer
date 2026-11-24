@@ -7,7 +7,7 @@ import { clearFireworks, fireworksMotionReduced, playFireworks, prepareFireworks
 import { choosePassage, exportPassages, importNumberedInspiredPassages, importPassages, normalizeText, validatePassage } from "./passages.js";
 import { TypingSession, ordinal } from "./typing.js";
 import { CHALLENGE_PASSAGE, CHALLENGE_SECONDS, CHALLENGE_STORIES, formatChallengeAccuracy, makeChallengeTrackPicker, takeChallengeStory, TimedChallenge } from "./timed-challenge.js";
-import { checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
+import { challengeNickname, checkChallengeNickname, fetchChallengeBoard, isChallengeToken, postChallengeScore, recordChallengePlay } from "./challenge-scores.js";
 import { calculatePlace, createAiRacers, createChallengeRivals, updateAi, updateChallengeRivals, validRivalWpm } from "./ai.js";
 import { GameAudio } from "./audio.js";
 import { CHAMPIONSHIP_RACES, championshipStandings, highestSelectableLevel, rankRace } from "./championship.js";
@@ -715,7 +715,7 @@ function raceTypingInstruction() {
 }
 
 function raceTypingModeHint() {
-  return raceSession.ignoreMistakes ? "Flow mode: missed letters turn red." : "Strict mode: use Backspace to fix mistakes.";
+  return raceSession.ignoreMistakes ? "Flow mode: keep typing or use Backspace to correct a letter." : "Strict mode: use Backspace to fix mistakes.";
 }
 
 function renderTyping(card, session) {
@@ -816,7 +816,7 @@ function syncChallengeTypingMode() {
     button.setAttribute("aria-pressed", String(button.dataset.challengeMode === mode));
   });
   $("#challengeModeHint").textContent = mode === "flow"
-    ? "Wrong letters turn red and you can keep typing."
+    ? "Wrong letters turn red. You can keep typing or use Backspace to fix them."
     : "Fix a wrong letter with Backspace before moving on.";
 }
 
@@ -1397,7 +1397,11 @@ function finishTimedChallenge(now) {
   audio.pauseMusic({ reset: true });
   audio.play("finish");
   const accuracy = renderChallengeAccuracy();
-  latestChallengeScore = raceSession.correctKeystrokes ? { correct: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes, passageId: raceSetup.passage.id, profile: profileKey(), posted: false } : null;
+  latestChallengeScore = raceSession.correctCharacters ? {
+    correct: raceSession.correctCharacters, correctHits: raceSession.correctKeystrokes, attempts: raceSession.totalKeystrokes,
+    passageId: raceSetup.passage.id, nickname: racePlayer.name, ownerId: challengeOwnerForProfile(racePlayer.name),
+    profile: profileKey(racePlayer.name), posted: false,
+  } : null;
   $("#useChallengePace").disabled = !latestChallengeScore || raceSession.scoreWpm < 5;
   $("#challengeClock").textContent = "0:00";
   $("#raceWpm").textContent = $("#challengeResultWpm").textContent = Number(raceSession.scoreWpm.toFixed(1));
@@ -1410,6 +1414,9 @@ function finishTimedChallenge(now) {
   updateChallengeRivals(raceRacers, CHALLENGE_SECONDS, raceSession.track.stride);
   renderer.draw({ racers: raceRacers, player: racePlayer, time: now, countdown: false });
   $("#challengeResultOverlay").classList.remove("hidden");
+  $("#retryChallengePost").hidden = true;
+  $("#challengePostStatus").textContent = latestChallengeScore ? "" : "No score to post: finish with at least one correct character.";
+  if (latestChallengeScore) void publishChallengeResult(latestChallengeScore);
   $("#challengePlayAgain").focus({ preventScroll: true });
   if (raceSession.totalKeystrokes && raceSetup.attemptId) {
     void recordChallengePlay(raceSetup.attemptId).then(saved => {
@@ -1433,6 +1440,9 @@ function showChallengeLobby({ historyMode = "push" } = {}) {
   $("#challengeRacerPortrait").src = racer.portrait || racer.animations.idle.file;
   $("#challengeRacerBadge").textContent = `Your racer: ${racer.displayName}`;
   $("#challengeRivalWpm").value = challengeRivalPace();
+  $("#challengePostingNotice").textContent = challengeNickname(data.profile.name)
+    ? `Finishing posts your score publicly as ${data.profile.name}. Use a game nickname, not your real name.`
+    : "You can practice with this nickname. To post scores, save a nickname with 2–24 letters, numbers, spaces, hyphens, or underscores in Race Setup.";
   syncChallengeStoryChoice();
   syncChallengeTypingMode();
   showScreen("challenge", { historyMode });
@@ -1448,7 +1458,7 @@ function useChallengePace() {
   const score = latestChallengeScore;
   if (!score || score.correct < 25 || score.profile !== profileKey() || !data.profile.name) return;
   const wpm = score.correct / 5;
-  data.profile.calibration = { playerName: data.profile.name, wpm, accuracy: score.correct / score.attempts, date: new Date().toISOString(), method: "challenge" };
+  data.profile.calibration = { playerName: data.profile.name, wpm, accuracy: score.correctHits / score.attempts, date: new Date().toISOString(), method: "challenge" };
   persist();
   showDashboard();
   toast(`Starting pace saved: ${Number(wpm.toFixed(1))} WPM`);
@@ -1488,36 +1498,31 @@ async function refreshChallengeScores(view = "dialog") {
 }
 
 function openChallengeScores() {
-  const score = currentScreen === "race" && raceSetup?.timedChallenge ? latestChallengeScore : null;
-  const form = $("#challengeScoreForm");
-  form.classList.toggle("hidden", !score || score.posted);
-  form.reset();
-  $("#postChallengeScore").disabled = Boolean(score?.posting);
-  $("#challengePostStatus").textContent = score?.posted ? "Your score was posted online." : "";
   $("#challengeScoresDialog").showModal();
   void refreshChallengeScores();
 }
 
-async function submitChallengeScore(event) {
-  event.preventDefault();
-  const score = latestChallengeScore;
-  if (!score || score.posting || score.posted || currentScreen !== "race" || !raceSetup?.timedChallenge) return;
+async function publishChallengeResult(score) {
+  if (!score || score.posting || score.posted) return;
   const status = $("#challengePostStatus");
-  const button = $("#postChallengeScore");
-  status.textContent = "Posting your score…";
-  score.posting = button.disabled = true;
+  const retry = $("#retryChallengePost");
+  retry.hidden = true;
+  status.textContent = `Posting your score as ${score.nickname}…`;
+  score.posting = true;
   try {
-    await postChallengeScore({ ...score, nickname: $("#challengeNickname").value, ownerId: challengeOwnerForProfile(data.profile.name) });
+    await postChallengeScore(score);
     score.posted = true;
+    if ($("#challengeScoresDialog").open) void refreshChallengeScores();
+    if ($("#leaderboardDialog").open) void refreshChallengeScores("combined");
+    if (currentScreen === "challenge") void refreshChallengeScores("lobby");
     if (latestChallengeScore !== score) return;
-    $("#challengeScoreForm").classList.add("hidden");
-    status.textContent = "Your score was posted online.";
-    void refreshChallengeScores();
+    status.textContent = `Score posted online as ${score.nickname}. The board shows your personal best.`;
   } catch (error) {
-    if (latestChallengeScore === score) status.textContent = error.message || "Could not post your score online.";
+    if (latestChallengeScore !== score) return;
+    retry.hidden = error.retryable === false;
+    status.textContent = retry.hidden ? error.message : "Score not posted. Check your connection and retry.";
   } finally {
     score.posting = false;
-    if (latestChallengeScore === score) button.disabled = false;
   }
 }
 
@@ -2172,7 +2177,11 @@ function bindEvents() {
     event.target.removeAttribute("aria-invalid");
     event.target.removeAttribute("aria-describedby");
   });
-  $("#challengeScoreForm").addEventListener("submit", submitChallengeScore);
+  $("#retryChallengePost").addEventListener("click", () => void publishChallengeResult(latestChallengeScore));
+  window.addEventListener("online", () => {
+    if (currentScreen === "race" && raceSetup?.timedChallenge && !$("#retryChallengePost").hidden)
+      void publishChallengeResult(latestChallengeScore);
+  });
   $("#manualPaceForm").addEventListener("submit", saveManualPace);
   $("#passageForm").addEventListener("submit", savePassage);
   $("#campaignForm").addEventListener("submit", saveCampaignEditor);

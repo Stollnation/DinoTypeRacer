@@ -52,6 +52,6 @@ test("posting a rotated run sends its story ID but never the typed passage or lo
   const ownerId = "a768bf75-ab69-4f39-8f4a-f443a7371721";
   await postChallengeScore({ nickname: "Moss", correct: 200, attempts: 206, ownerId, passageId: passage.id, profile: "local-only", text: passage.text }, async (_url, options) => {
     assert.deepEqual(JSON.parse(options.body), { nickname: "Moss", correct: 200, attempts: 206, passageId: passage.id, ownerId });
-    return new Response("{}");
+    return Response.json({ saved: true });
   });
 });

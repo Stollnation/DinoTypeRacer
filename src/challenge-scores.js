@@ -16,14 +16,15 @@ export function challengeNickname(input) {
 
 export function challengeScore(submission) {
   const nickname = challengeNickname(submission?.nickname);
-  const { correct, attempts, passageId = CHALLENGE_PASSAGE.id } = submission || {};
+  const { correct, correctHits = correct, attempts, passageId = CHALLENGE_PASSAGE.id } = submission || {};
   const length = storyLengths.get(passageId);
   if (!nickname || !length || !Number.isInteger(correct) || !Number.isInteger(attempts)
-    || correct < 1 || correct > length || correct > attempts || attempts > length * 3) return null;
+    || !Number.isInteger(correctHits) || correct < 1 || correct > length || correct > correctHits
+    || correctHits > attempts || attempts > length * 3) return null;
   return {
     nickname,
     wpm: (correct / 5) / (CHALLENGE_SECONDS / 60),
-    accuracy: Math.round(10_000 * correct / attempts) / 10_000,
+    accuracy: Math.round(10_000 * correctHits / attempts) / 10_000,
   };
 }
 
@@ -86,13 +87,18 @@ export async function checkChallengeNickname(nickname, ownerId, fetcher = fetch)
 }
 
 export async function postChallengeScore(submission, fetcher = fetch) {
-  if (!challengeScore(submission)) throw new Error("Enter a nickname with 2 to 24 letters, numbers, spaces, hyphens, or underscores.");
-  const { nickname, correct, attempts, ownerId, passageId } = submission;
+  const notRanked = message => Object.assign(new Error(message), { retryable: false });
+  if (!challengeNickname(submission?.nickname)) throw notRanked("Your saved nickname can’t appear on the global board. Choose a 2–24 character game nickname in Race Setup for your next run.");
+  if (!challengeScore(submission)) throw notRanked("This score could not be ranked.");
+  const { nickname, correct, correctHits, attempts, ownerId, passageId } = submission;
   const response = await fetcher(ENDPOINT, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ nickname, correct, attempts, ownerId, passageId }),
+    body: JSON.stringify({ nickname, correct, correctHits, attempts, ownerId, passageId }),
+    signal: AbortSignal.timeout(10000),
   });
-  if (response.status === 409) throw new Error("Name already taken. Try a different public nickname.");
-  if (!response.ok) throw new Error("Could not post your score online. Try again in a moment.");
+  if (response.status === 409) throw notRanked("That nickname is already taken on the global board. Save another nickname in Race Setup for your next run.");
+  if (response.status === 400) throw notRanked("The global board could not accept this score.");
+  if (!response.ok || (await response.json().catch(() => null))?.saved !== true)
+    throw new Error("Could not confirm that your score was saved online.");
 }

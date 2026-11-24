@@ -47,7 +47,7 @@
           </div>
           <div class="calibration-modes" role="radiogroup" aria-label="Mistake handling">
             <button class="calibration-mode selected" data-calibration-mode="strict" role="radio" aria-checked="true"><strong>Strict</strong><span>Correct mistakes to continue</span></button>
-            <button class="calibration-mode" data-calibration-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving past mistakes</span></button>
+            <button class="calibration-mode" data-calibration-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep typing or fix mistakes with Backspace</span></button>
           </div>
           <form id="manualPaceForm" class="manual-pace-form">
             <div><strong>Know your speed?</strong><span>Enter your usual WPM and skip the 60-second test.</span></div>
@@ -102,7 +102,7 @@
                 <div class="typing-settings">
                 <div class="race-modes" role="radiogroup" aria-label="Race typing mode">
                   <button class="calibration-mode selected" data-race-mode="strict" role="radio" aria-checked="true"><strong>Strict</strong><span>Fix mistakes with Backspace</span></button>
-                  <button class="calibration-mode" data-race-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep moving and mark misses red</span></button>
+                  <button class="calibration-mode" data-race-mode="flow" role="radio" aria-checked="false"><strong>Flow</strong><span>Keep typing or fix mistakes with Backspace</span></button>
                 </div>
                 <div class="helper-audio-controls"><label class="helper-toggle">Missed-key helper<select id="focusKeyHelperSelect" aria-label="Missed-key helper"><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label><label class="helper-toggle">Key Noise<select id="keyNoiseSelect" aria-label="Key Noise"><option value="enabled">On</option><option value="disabled">Off</option></select></label></div>
                 </div>
@@ -167,7 +167,8 @@
                   <input id="challengeRivalWpm" type="number" min="5" max="300" step="1" required inputmode="numeric" value="40" aria-describedby="challengeRivalHint" />
                   <small id="challengeRivalHint">Set the speed of the four computer racers.</small>
                 </div>
-                <button id="launchChallengeButton" class="primary" type="button" data-action="start-timed-challenge">Start Challenge</button>
+                <small id="challengePostingNotice" class="challenge-posting-notice"></small>
+                <button id="launchChallengeButton" class="primary" type="button" data-action="start-timed-challenge" aria-describedby="challengePostingNotice">Start Challenge</button>
               </div>
               <img id="challengeRacerPortrait" alt="" />
               <span id="challengeRacerBadge" class="challenge-racer-badge"></span>
@@ -191,9 +192,11 @@
                 <span><b id="challengeResultTextAccuracy">—</b> Text accuracy</span>
               </div>
               <p class="challenge-result-note">Keystroke accuracy counts mistakes you fixed. Text accuracy shows what was right in the part you tried.</p>
+              <p id="challengePostStatus" class="challenge-result-note" role="status"></p>
               <div class="quick-result-actions">
+                <button class="secondary" id="retryChallengePost" type="button" hidden>Retry posting</button>
                 <button class="secondary" id="useChallengePace" type="button" data-action="use-challenge-pace">Use as starting pace</button>
-                <button class="secondary" type="button" data-action="open-challenge-scores">Challenge scores</button>
+                <button class="secondary" type="button" data-action="open-challenge-scores">View leaderboard</button>
                 <button class="secondary" type="button" data-action="challenge-lobby">Challenge lobby</button>
                 <button class="primary" id="challengePlayAgain" type="button" data-action="start-timed-challenge">Try again</button>
               </div>
@@ -264,13 +267,6 @@
           <p class="eyebrow">One-minute Sherlock mysteries</p>
           <h3 id="challengeScoresTitle">Global Challenge Leaderboard</h3>
           <p>One minute, one passage. The fastest score per nickname is shown.</p>
-          <form id="challengeScoreForm" class="challenge-score-form hidden" autocomplete="off">
-            <p id="challengePublicNote">Posting is optional. Your game nickname, speed, and accuracy will be public. Don’t use your real name.</p>
-            <label for="challengeNickname">Public nickname</label>
-            <input id="challengeNickname" name="challengeAlias" type="text" inputmode="text" autocomplete="off" maxlength="24" minlength="2" placeholder="e.g. CleverRaptor" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-form-type="other" aria-describedby="challengePublicNote" required />
-            <button class="primary compact" id="postChallengeScore" type="submit">Post score</button>
-          </form>
-          <p id="challengePostStatus" role="status"></p>
           <p id="challengeScoresStatus" role="status"></p>
           <ol id="challengeScoresList" class="challenge-scores-list"></ol>
         </dialog>
@@ -401,13 +397,13 @@
                   <p>Your Challenge racer rotates; the portrait shows who you will play this time. Set <strong>Rival pace (WPM)</strong> to race four computer dinos at your target speed. This setting is saved for your player on this browser. It does not affect your score or regular championship racer.</p>
                   <p>Leave <strong>Rotate Sherlock stories</strong> unchecked for the original Missing Biscuit mystery every time. Check it for a shuffled set of twenty original mysteries. Your racer remembers the choice and the story cycle on this browser. The track scenery rotates independently either way.</p>
                   <p>Save a racer nickname, then select the red <strong>DAILY CHALLENGE</strong> button below Your starting pace. You don’t need to take the pace test first. <strong>Strict</strong> is the default: fix a red miss with Backspace before continuing. In <strong>Flow</strong>, misses still turn red but you can keep typing. Challenge remembers this choice for your racer on this browser. After the countdown, type as much of the mystery as you can in one minute. The finish shows words per minute and accuracy. Choose <strong>Use as starting pace</strong> if you want to set your pace from this run; Challenge never changes your level progress.</p>
-                  <p>Open <strong>Challenge scores</strong> after a run to post it under a public game nickname. This board is shared across computers when the online service is available, and is separate from regular race scores. No scores are posted without your action.</p>
+                  <p>Finishing the Daily Challenge automatically posts your WPM and keystroke accuracy under your saved racer nickname. Use a game nickname, not your real name. The global board shows your best score. Choose <strong>View leaderboard</strong> to see it. If posting fails, your result stays on the finish screen and you can retry without retyping your name.</p>
                   <p>Correct letters move your dino. The dino starts at an estimated 40 WPM. After every word, the game uses your recent typing pace (up to the last four words), the distance left, and the time remaining to size the next strides. Even a sudden sprint leaves visible track ahead until the buzzer. At 55 seconds, even mid-word, the game checks your last ten seconds of typing and adjusts your stride for the distance left. Stop typing and your dino settles, except for a glide in the final five seconds. You always cross at the buzzer; only typing earns WPM. <strong>Keystroke accuracy</strong> counts wrong keys even if you fix them. <strong>Text accuracy</strong> shows how much of the text you attempted was correct at the end; text you never reached doesn’t count against you.</p>
                 </div></details>
                 <details data-help-entry><summary>What is the difference between Strict and Flow?</summary><div>
                   <p>In either mode, type the passage as shown, including capital letters, punctuation, and spaces. When the countdown ends, click the typing area if it doesn't have focus.</p>
                   <ul><li><strong>Strict:</strong> A wrong key marks the current character red and stops progress. Press <kbd>Backspace</kbd> once to clear it, then type the expected character. The mistake still counts, but extra keys pressed while the error is waiting for correction don't add more mistakes. Backspace doesn't rewind correctly typed text.</li>
-                  <li><strong>Flow:</strong> A wrong key marks the missed character red and moves the cursor on. Keep typing the next character. Backspace doesn't go back to repair previous characters.</li></ul>
+                  <li><strong>Flow:</strong> A wrong key turns red, but you can keep typing. Press <kbd>Backspace</kbd> to go back one character at a time, then retype it. Fixes improve the final text, but the original miss still counts toward keystroke accuracy. Erasing and retyping a letter doesn’t earn extra WPM.</li></ul>
                   <p>The pace test has its own mode selection. Set the mode for regular races separately under <strong>Game Settings</strong>.</p>
                 </div></details>
                 <details data-help-entry><summary>Pause, resume, restart, or leave a race</summary><div>
@@ -475,7 +471,7 @@ At sunset, the youngest dinosaur finds a shortcut through the ferns.</pre>
                   <p><strong>Import replaces the destination's local saves; it doesn't merge them.</strong> The backup includes profiles, progress, libraries, campaigns, and custom racer artwork. It doesn't change the online leaderboard. Keep the file private and use the HTTPS site or a localhost copy for transfers.</p>
                 </div></details>
                 <details data-help-entry><summary>Understand local and online leaderboard scores</summary><div>
-                  <p>Open <strong>Leaderboard</strong> in the starting-pace card or on the finish page to see two separate boards. <strong>Global Challenge</strong> shows scores players chose to post after the one-minute Challenge. <strong>This Browser</strong> shows regular race results saved for players on this browser. Regular race results never go on the global board.</p>
+                  <p>Open <strong>Leaderboard</strong> in the starting-pace card or on the finish page to see two separate boards. <strong>Global Challenge</strong> shows each player’s best automatically posted Daily Challenge score. <strong>This Browser</strong> shows regular race results saved on this browser. Regular races never post to the global board.</p>
                   <p>Only the public nickname, speed, and accuracy appear on the Global Challenge board. If you're offline, you can still see your browser's local scores.</p>
                 </div></details>
               </section>

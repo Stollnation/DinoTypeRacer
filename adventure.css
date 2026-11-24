@@ -516,12 +516,9 @@ body[data-screen=challenge] .challenge-lobby-copy h3 {
 #challengeResultOverlay .quick-result-actions button { padding: 7px 11px; min-height: 32px; font-size: 13px; }
 #challengeClock { font-variant-numeric: tabular-nums; }
 body[data-screen=race] #raceScreen[data-challenge] .race-typing .typing-viewport { height: clamp(64px, 10dvh, 108px); }
-.challenge-score-form {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-block: 14px;
-  padding: 12px; border: 1px solid var(--line); border-radius: 12px;
-}
-.challenge-score-form p { flex: 0 0 100%; margin: 0; font-size: 13px; }
-.challenge-score-form input { min-width: 0; width: min(24ch, 100%); }
+.challenge-posting-notice { display: block; max-width: 34ch; margin-bottom: .7rem; color: #fff5dc; font-size: .8rem; line-height: 1.4; overflow-wrap: anywhere; }
+#challengeResultOverlay #challengePostStatus { margin-top: .4rem; }
+#retryChallengePost[hidden] { display: none; }
 .challenge-scores-list { padding-inline-start: 28px; }
 .challenge-scores-list li { padding: 5px; border-bottom: 1px solid var(--line); }
 .challenge-scores-list li > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }

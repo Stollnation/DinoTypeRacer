@@ -52,13 +52,16 @@ export class TypingSession {
     });
   }
 
-  backspace() {
-    if (this.errorChar) this.errorChar = "";
+  backspace(now = performance.now()) {
+    if (!this.ignoreMistakes) { this.errorChar = ""; return; }
+    if (!this.index || this.finished) return;
+    this.missedIndices.delete(--this.index);
+    this.sample(now);
   }
 
   sample(now = performance.now()) {
     const elapsed = this.elapsed(now);
-    this.samples.push({ t: elapsed, p: this.progress, chars: this.correctKeystrokes });
+    this.samples.push({ t: elapsed, p: this.progress, chars: this.correctCharacters });
     if (this.samples.length > 1000) this.samples.shift();
   }
 
@@ -70,7 +73,9 @@ export class TypingSession {
   get progress() { return this.text.length ? this.index / this.text.length : 0; }
   get finished() { return this.index >= this.text.length; }
   get accuracy() { return this.totalKeystrokes ? this.correctKeystrokes / this.totalKeystrokes : 1; }
-  wpm(now = performance.now()) { const minutes = this.elapsed(now) / 60; return minutes > 0 ? (this.correctKeystrokes / 5) / minutes : 0; }
+  // Speed measures the text still on the page; accuracy remembers every key typed.
+  get correctCharacters() { return this.index - this.missedIndices.size; }
+  wpm(now = performance.now()) { const minutes = this.elapsed(now) / 60; return minutes > 0 ? (this.correctCharacters / 5) / minutes : 0; }
   peakWpm() {
     if (this.samples.length < 2) return this.wpm();
     let peak = 0;
